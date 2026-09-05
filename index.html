@@ -20,7 +20,7 @@
     <meta name="viewport" content="width=device-width, height=device-height, user-scalable=no">
     <meta name="description" content="Play micropolisJS and build a virtual city in your browser! micropolisJS is a handwritten HTML5/Javascript port of Micropolis, the open-source release of SimCity (the 1989 version).">
     <link rel="stylesheet" media="screen" type="text/css" href="css/style.css">
-    <title>micropolisJS</title>
+    <title>sim-b0r3d-city</title>
   </head>
   <body>
     <img id="tiles" class="imageData" src="images/tiles.png" alt="These are the game's principal tiles">
@@ -28,7 +28,7 @@
     <img id="sprites" class="imageData" src="images/sprites.png" alt="These are the game's sprites">
     <header id="header" class="chunk border-bottom padding10">
       <div class="left inlineblock">
-        <h1 id="title" class="white fontlarge">micropolisJS</h1>
+        <h1 id="title" class="white fontlarge">sim-b0r3d-city</h1>
       </div>
       <nav class="white right padding10 inlineblock">
         <ul>
@@ -43,7 +43,7 @@
         <div data-hasscript="false" id="loadingBanner" class="alignCenter padding10 mintcream chunk shadow centred">Loading</div>
         <div id="splash" class="mintcream awaitGeneration open shadow padding10 centred">
           <h2 class="chunk alignCenter">Welcome!</h2>
-          <p>micropolisJS is a handmade Javascript port of the open-source city simulator <cite>Micropolis</cite></p>
+          <p>sim-b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a>, a handmade Javascript port of the open-source city simulator <cite>Micropolis</cite></p>
           <div id="splashContainer"></div>
           <div id="splashButtonContainer">
             <div id="splashButtons">
@@ -104,6 +104,9 @@
               <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
             </div>
             <div>
+              <button id="highScoreRequest" class="miscButton">High Scores</button>
+            </div>
+            <div>
               <button id="settingsRequest" class="miscButton">Settings</button>
             </div>
             <div>
@@ -137,7 +140,7 @@
           </div>
         </div>
         <div id="tw" class="z1 rightedge initialHidden">
-          <a class="twitter-share-button" href="https://twitter.com/share?count=none" data-text="I'm city-building like it's 1989! Playing micropolisJS, a HTML5 retro city-builder https://graememcc.github.io/micropolisJS">Tweet</a><script type="text/javascript">window.twttr=(function(d,s,id){var t,js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return}js=d.createElement(s);js.id=id;js.src="https://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);return window.twttr||(t={_e:[],ready:function(f){t._e.push(f)}})}(document,"script","twitter-wjs"));</script>
+          <a class="twitter-share-button" href="https://twitter.com/share?count=none" data-text="I'm city-building like it's 1989! Playing sim-b0r3d-city, a HTML5 retro city-builder https://still.b0r3d.org/lab/sim-b0r3d-city/">Tweet</a><script type="text/javascript">window.twttr=(function(d,s,id){var t,js,fjs=d.getElementsByTagName(s)[0];if(d.getElementById(id)){return}js=d.createElement(s);js.id=id;js.src="https://platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);return window.twttr||(t={_e:[],ready:function(f){t._e.push(f)}})}(document,"script","twitter-wjs"));</script>
         </div>
         <div id="monstertv" class="alignCenter z1 hidden rightedge padding10 controlShadow open">
           <div id="monsterTVContainer">
@@ -169,7 +172,7 @@
       <footer id="footer" class="alignCenter chunk white padding10">
         <div id="build">Build: <%= htmlWebpackPlugin.options.gitHash %></div>
         <div class="nameLicense">
-          Micropolis is a registered trademark of <a href="https://www.micropolis.com">Micropolis Corporation (Micropolis GmbH)</a> and is licensed here as a courtesy of the owner under the <a href="name_license.html">Micropolis Public Name License</a>.
+          Based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, itself a port of the open-source <cite>Micropolis</cite>.
         </div>
       </footer>
       <div class="hidden modal shadow" id="budget">
@@ -456,6 +459,28 @@
             <button id="debugCancel" class="cancel">Cancel</button>
             <input type="submit" id="debugOK" class="dialogOK" value="OK">
           </form>
+        </div>
+      </div>
+      <div class="hidden modal shadow" id="highScoreWindow">
+        <header id="highScoreHeader" class="highScoreHeader white padding10 chunk alignCenter">
+           High Scores
+        </header>
+        <div id="highScoreContainer" class="padding10 open">
+          <div id="highScoreCurrent" class="alignCenter padding10">
+            Your city: <strong id="highScoreCurrentScore">0</strong> pts
+            (<strong id="highScoreCurrentClass">VILLAGE</strong>)
+          </div>
+          <form id="highScoreSubmitForm" class="alignCenter margin10">
+            <label for="highScoreName">Name (3 letters):</label>
+            <input type="text" id="highScoreName" maxlength="3" autocomplete="off" style="text-transform:uppercase; width:3em;">
+            <button type="submit" id="highScoreSubmit" class="dialogOK">Submit Score</button>
+          </form>
+          <div id="highScoreStatus" class="alignCenter padding10"></div>
+          <table id="highScoreTableEl" class="alignCenter">
+            <thead><tr><th>#</th><th>Name</th><th>Score</th><th>Class</th></tr></thead>
+            <tbody id="highScoreRows"></tbody>
+          </table>
+          <button id="highScoreCancel" class="cancel">Close</button>
         </div>
       </div>
       <div class="hidden modal shadow" id="touchWarnWindow">

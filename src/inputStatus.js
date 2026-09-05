@@ -71,6 +71,7 @@ var InputStatus = EventEmitter(function(map, tileWidth) {
   $('#screenshotRequest').click(screenshotHandler.bind(this));
   $('#settingsRequest').click(settingsHandler.bind(this));
   $('#saveRequest').click(saveHandler.bind(this));
+  $('#highScoreRequest').click(highScoreHandler.bind(this));
   $('#debugRequest').click(debugHandler.bind(this));
 });
 
@@ -303,6 +304,7 @@ var makeHandler = function(message) {
 
 
 var budgetHandler = makeHandler('BUDGET_REQUESTED');
+var highScoreHandler = makeHandler('HIGH_SCORE_REQUESTED');
 var debugHandler = makeHandler('DEBUG_WINDOW_REQUESTED');
 var disasterHandler = makeHandler('DISASTER_REQUESTED');
 var evalHandler = makeHandler('EVAL_REQUESTED');

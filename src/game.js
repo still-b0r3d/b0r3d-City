@@ -22,6 +22,7 @@ import { DisasterWindow } from './disasterWindow.js';
 import { EvaluationWindow } from './evaluationWindow.js';
 import { GameCanvas } from './gameCanvas.js';
 import { GameMap } from './gameMap.js';
+import { HighScoreWindow } from './highScoreWindow.js';
 import { InfoBar } from './infoBar.js';
 import { InputStatus } from './inputStatus.js';
 import * as Messages from './messages.ts';
@@ -150,6 +151,11 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // ... the save confirmation window
   this.saveWindow = new SaveWindow(opacityLayerID, 'saveWindow');
   this.saveWindow.addEventListener(Messages.SAVE_WINDOW_CLOSED, this.genericDialogClosure);
+
+  // ... the high score window
+  this.highScoreWindow = new HighScoreWindow(opacityLayerID, 'highScoreWindow');
+  this.highScoreWindow.addEventListener(Messages.HIGH_SCORE_WINDOW_CLOSED, this.genericDialogClosure);
+  this.inputStatus.addEventListener(Messages.HIGH_SCORE_REQUESTED, this.handleHighScoreRequest.bind(this));
 
   // ... the touch warn window
   this.touchWindow = new TouchWarnWindow(opacityLayerID, 'touchWarnWindow');
@@ -528,6 +534,16 @@ Game.prototype.handleSave = function() {
   this.dialogOpen = true;
   this._openWindow = 'saveWindow';
   this.saveWindow.open();
+};
+
+
+Game.prototype.handleHighScoreRequest = function() {
+  this.dialogOpen = true;
+  this._openWindow = 'highScoreWindow';
+  this.highScoreWindow.open({
+    score: this.simulation.evaluation.cityScore,
+    level: HighScoreWindow.classNameToLevel(this.simulation.evaluation.cityClass)
+  });
 };
 
 

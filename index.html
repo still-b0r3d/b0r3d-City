@@ -435,9 +435,23 @@
         </header>
         <div id="debugContainer" class="padding10 open">
           <form id="debugForm" class="alignCenter margin10">
-            <div id="debugFundContainer">
+            <div id="debugFundContainer" class="padding10">
               <label for="cheatFundsAmount">Add funds:</label>
               <input type="number" id="cheatFundsAmount" name="cheatFundsAmount" min="0" step="1000" value="100000">
+            </div>
+            <div id="cheatFreeBuildContainer" class="padding10">
+              Free build (no cost):
+              <input type="radio" class="cheatFreeBuildSetting" name="cheatFreeBuildSetting" id="cheatFreeBuildYes" value="true"><label for="cheatFreeBuildYes">Yes</label>
+              <input type="radio" class="cheatFreeBuildSetting" name="cheatFreeBuildSetting" id="cheatFreeBuildNo" value="false" checked="checked"><label for="cheatFreeBuildNo">No</label>
+            </div>
+            <div id="cheatDisasterContainer" class="padding10">
+              Trigger disaster:
+              <button type="button" class="cheatDisasterButton" data-disaster="fire">Fire</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="flood">Flood</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="tornado">Tornado</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="monster">Monster</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="meltdown">Meltdown</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="crash">Crash</button>
             </div>
             <button id="debugCancel" class="cancel">Cancel</button>
             <input type="submit" id="debugOK" class="dialogOK" value="OK">

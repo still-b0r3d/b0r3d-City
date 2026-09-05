@@ -339,6 +339,58 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
 };
 
 
+Game.prototype.cheatAddFunds = function(amount) {
+  this.simulation.budget.spend(-amount);
+};
+
+
+Game.prototype.cheatSetFreeBuild = function(enabled) {
+  BaseTool.setFreeBuild(enabled);
+};
+
+
+Game.prototype.cheatTriggerDisaster = function(name) {
+  switch (name) {
+    case 'fire':
+      this.simulation.disasterManager.makeFire();
+      break;
+
+    case 'flood':
+      this.simulation.disasterManager.makeFlood();
+      break;
+
+    case 'crash':
+      this.simulation.disasterManager.makeCrash();
+      break;
+
+    case 'meltdown':
+      this.simulation.disasterManager.makeMeltdown();
+      break;
+
+    case 'tornado':
+      this.simulation.spriteManager.makeTornado();
+      break;
+
+    case 'monster':
+      this.simulation.spriteManager.makeMonster();
+      break;
+
+    default:
+      console.warn('Unknown disaster cheat', name);
+  }
+};
+
+
+Game.prototype.cheatGetState = function() {
+  return {
+    funds: this.simulation.budget.totalFunds,
+    cheatMenuEnabled: this.cheatMenuEnabled,
+    freeBuild: BaseTool.getFreeBuild(),
+    date: this.simulation.getDate ? this.simulation.getDate() : null
+  };
+};
+
+
 Game.prototype.handleDebugWindowClosure = function(actions) {
   this.dialogOpen = false;
 
@@ -347,7 +399,15 @@ Game.prototype.handleDebugWindowClosure = function(actions) {
 
     switch (a.action) {
       case DebugWindow.ADD_FUNDS:
-        this.simulation.budget.spend(-a.data);
+        this.cheatAddFunds(a.data);
+        break;
+
+      case DebugWindow.FREE_BUILD_CHANGED:
+        this.cheatSetFreeBuild(a.data);
+        break;
+
+      case DebugWindow.TRIGGER_DISASTER:
+        this.cheatTriggerDisaster(a.data);
         break;
 
       default:
@@ -415,7 +475,9 @@ var makeWindowOpenHandler = function(winName, customFn) {
 };
 
 
-Game.prototype.handleDebugRequest = makeWindowOpenHandler('debug');
+Game.prototype.handleDebugRequest = makeWindowOpenHandler('debug', function() {
+  return [{freeBuild: BaseTool.getFreeBuild()}];
+}.bind(this));
 Game.prototype.handleDisasterRequest = makeWindowOpenHandler('disaster');
 Game.prototype.handleQueryRequest = makeWindowOpenHandler('query');
 Game.prototype.handleScreenshotRequest = makeWindowOpenHandler('screenshot');

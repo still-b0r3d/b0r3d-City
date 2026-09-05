@@ -65,11 +65,14 @@ var modifyIfEnoughFunding = function(budget) {
     return false;
   }
 
-  if (budget.totalFunds < this._applicationCost) {
+  if (!this.freeBuild && budget.totalFunds < this._applicationCost) {
     this.result = this.TOOLRESULT_NO_MONEY;
     this.clear();
     return false;
   }
+
+  if (this.freeBuild)
+    this._applicationCost = 0;
 
   apply.call(this, budget);
   this.clear();
@@ -86,6 +89,7 @@ var BaseToolConstructor = {
   addCost: addCost,
   autoBulldoze: true,
   bulldozerCost: 1,
+  freeBuild: false,
   clear: clear,
   doAutoBulldoze: doAutoBulldoze,
   init: init,
@@ -120,6 +124,12 @@ var BaseTool = {
   },
   getAutoBulldoze: function() {
     return BaseToolConstructor.autoBulldoze;
+  },
+  setFreeBuild: function(value) {
+    BaseToolConstructor.freeBuild = value;
+  },
+  getFreeBuild: function() {
+    return BaseToolConstructor.freeBuild;
   },
   save: save,
   load: load

@@ -83,6 +83,22 @@ var regenerateMap = function(e) {
 };
 
 
+// Exposes a small console-accessible cheat API for development/testing use,
+// mirroring the in-game Cheat Menu actions. See devtools console:
+// window.b0r3dCheats.addFunds(100000), .setFreeBuild(true),
+// .triggerDisaster('fire'|'flood'|'tornado'|'monster'|'meltdown'|'crash'),
+// .getState()
+var exposeCheatAPI = function(g) {
+  window.b0r3dCheats = {
+    game: g,
+    addFunds: function(amount) { g.cheatAddFunds(amount); },
+    setFreeBuild: function(enabled) { g.cheatSetFreeBuild(enabled); },
+    triggerDisaster: function(name) { g.cheatTriggerDisaster(name); },
+    getState: function() { return g.cheatGetState(); }
+  };
+};
+
+
 // Fetches game data from the storage manager, and launches the game. We won't return from here
 var handleLoad = function(e) {
   e.preventDefault();
@@ -102,6 +118,7 @@ var handleLoad = function(e) {
 
   // Launch
   var g = new Game(savedGame, this.tileSet, this.snowTileSet, this.spriteSheet, Simulation.LEVEL_EASY, name);
+  exposeCheatAPI(g);
 };
 
 
@@ -146,6 +163,7 @@ var play = function(e) {
 
   // Launch a new game
   var g = new Game(this.map, this.tileSet, this.snowTileSet, this.spriteSheet, difficulty, name);
+  exposeCheatAPI(g);
 };
 
 

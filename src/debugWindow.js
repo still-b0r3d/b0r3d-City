@@ -20,6 +20,12 @@ import { MiscUtils } from './miscUtils.js';
 var DebugWindow = ModalWindow(function() {
   $(debugCancelID).on('click', cancel.bind(this));
   $(debugFormID).on('submit', submit.bind(this));
+
+  $('.cheatDisasterButton').on('click', function(e) {
+    e.preventDefault();
+    var disaster = $(e.currentTarget).data('disaster');
+    this.close([{action: DebugWindow.TRIGGER_DISASTER, data: disaster}]);
+  }.bind(this));
 });
 
 
@@ -27,6 +33,8 @@ var debugCancelID = '#debugCancel';
 var debugFormID = '#debugForm';
 var debugOKID = '#debugOK';
 var cheatFundsAmountID = '#cheatFundsAmount';
+var cheatFreeBuildYesID = '#cheatFreeBuildYes';
+var cheatFreeBuildNoID = '#cheatFreeBuildNo';
 
 
 DebugWindow.prototype.close = function(actions) {
@@ -51,12 +59,23 @@ var submit = function(e) {
   if (amount > 0)
     actions.push({action: DebugWindow.ADD_FUNDS, data: amount});
 
+  var shouldFreeBuild = $('.cheatFreeBuildSetting:checked').val() === 'true';
+  actions.push({action: DebugWindow.FREE_BUILD_CHANGED, data: shouldFreeBuild});
+
   this.close(actions);
 };
 
 
-DebugWindow.prototype.open = function() {
+DebugWindow.prototype.open = function(cheatData) {
+  cheatData = cheatData || {};
+
   $(cheatFundsAmountID).val(100000);
+
+  if (cheatData.freeBuild)
+    $(cheatFreeBuildYesID).prop('checked', true);
+  else
+    $(cheatFreeBuildNoID).prop('checked', true);
+
   this._toggleDisplay();
 };
 
@@ -72,6 +91,8 @@ var defineAction = (function() {
 
 
 defineAction('ADD_FUNDS');
+defineAction('FREE_BUILD_CHANGED');
+defineAction('TRIGGER_DISASTER');
 
 
 export { DebugWindow };

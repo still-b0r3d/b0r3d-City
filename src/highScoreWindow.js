@@ -11,12 +11,23 @@ import $ from "jquery";
 
 import { HIGH_SCORE_WINDOW_CLOSED } from './messages.ts';
 import { ModalWindow } from './modalWindow.js';
+import { SiteEnv } from './siteEnv.js';
 
 // still.b0r3d.org's shared per-game leaderboard backend (see GAMES in
 // still-app.py) only allows [a-z0-9_]+ in its game-key URL segment, so this
 // has to be an underscored key even though the game displays as
-// "sim-b0r3d-city" and lives at /lab/sim-b0r3d-city/.
-var GAME_KEY = 'sim_b0r3d_city';
+// "sim-b0r3d-city". SiteEnv picks the main-site vs beta-build key so the
+// two deployments' scores never mix (see SiteEnv.leaderboardKey).
+var GAME_KEY = SiteEnv.leaderboardKey();
+
+// The leaderboard backend always lives on still.b0r3d.org regardless of
+// which of the two sites is currently serving this game -- admin
+// moderation of both boards happens there too, since that's where the
+// data actually is. An absolute URL works whether this happens to be
+// same-origin (the beta build, served from still.b0r3d.org itself) or
+// cross-origin (the main site); CORS for the main site's origin is
+// already set up on that backend for the shared visit counter.
+var API_BASE = 'https://still.b0r3d.org/api/';
 
 // The backend's "level" field is a plain integer (shared schema with the
 // other arcade games' numeric levels), so the city's evaluation class name
@@ -74,7 +85,7 @@ var renderScores = function(list) {
 var refreshScores = function() {
   $(highScoreRowsID).html('<tr><td colspan="5">Loading&hellip;</td></tr>');
 
-  $.getJSON('/api/' + GAME_KEY + '/scores').done(function(data) {
+  $.getJSON(API_BASE + GAME_KEY + '/scores').done(function(data) {
     renderScores(data.scores);
   }).fail(function() {
     $(highScoreRowsID).html('<tr><td colspan="5">Leaderboard unreachable right now.</td></tr>');
@@ -101,7 +112,7 @@ var submit = function(e) {
   $(highScoreStatusID).text('Submitting…');
 
   $.ajax({
-    url: '/api/' + GAME_KEY + '/submit',
+    url: API_BASE + GAME_KEY + '/submit',
     method: 'POST',
     contentType: 'application/json',
     data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel, population: self._currentPopulation})

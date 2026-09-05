@@ -90,5 +90,15 @@
         Based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, itself a port of the open-source <cite>Micropolis</cite>.
       </div>
     </footer>
+    <script>
+      // Same beta-build labeling as index.html, duplicated here in plain JS
+      // since this static info page doesn't load the game's own bundle.
+      if (window.location.hostname !== 'b0r3d.org' && window.location.hostname !== 'www.b0r3d.org') {
+        document.title = document.title + ' (Beta Build)';
+        var titleEl = document.getElementById('title');
+        if (titleEl)
+          titleEl.insertAdjacentHTML('beforeend', ' <small>(Beta Build)</small>');
+      }
+    </script>
   </body>
 </html>

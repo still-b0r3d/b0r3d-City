@@ -14,6 +14,7 @@
 import $ from "jquery";
 
 import { Config } from './config.js';
+import { SiteEnv } from './siteEnv.js';
 import { SplashScreen } from './splashScreen.js';
 import { TileSet } from './tileSet.js';
 import { TileSetURI } from './tileSetURI.ts';
@@ -90,6 +91,26 @@ var tileSetError = function() {
 Config.debug = window.location.search.slice(1).split('&').some(function(param) {
   return param.trim().toLowerCase() === 'debug=1';
 });
+
+
+// The beta build (anywhere but the main site) gets a visible label so it's
+// never mistaken for the current release -- title bar, header, and the
+// tweet-share text all pick up the current page's real URL/label instead
+// of a hardcoded one, so this keeps working correctly if either deployment
+// ever moves again.
+if (!SiteEnv.isMainSite()) {
+  document.title = document.title + ' (Beta Build)';
+  var titleEl = document.getElementById('title');
+  if (titleEl)
+    titleEl.insertAdjacentHTML('beforeend', ' <small>(Beta Build)</small>');
+}
+
+var tweetButton = document.querySelector('.twitter-share-button');
+if (tweetButton) {
+  var gameLabel = SiteEnv.isMainSite() ? 'sim-b0r3d-city' : 'sim-b0r3d-city (beta build)';
+  var gameUrl = window.location.origin + window.location.pathname;
+  tweetButton.setAttribute('data-text', "I'm city-building like it's 1989! Playing " + gameLabel + ', a HTML5 retro city-builder ' + gameUrl);
+}
 
 
 var tiles = $('#tiles')[0];

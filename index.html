@@ -153,7 +153,7 @@
             <span id="fpsValue">0</span> FPS
           </div>
           <div>
-            <button id="debugRequest">Debug</button>
+            <button id="debugRequest">Cheats</button>
           </div>
         </div>
         <div id="notifications" class="initialHidden neutral z1 rightedge alignCenter elided padding10 controlShadow"></div>
@@ -418,6 +418,11 @@
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersYes" value="true" checked="checked"><label for="disastersYes">Yes</label>
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersNo" value="false"><label for="disastersNo">No</label>
               </div>
+              <div id="cheatMenuSelect" class="padding10">
+                Cheat menu:
+                <input type="radio" class="cheatMenuSetting" name="cheatMenuSetting" id="cheatMenuYes" value="true"><label for="cheatMenuYes">Yes</label>
+                <input type="radio" class="cheatMenuSetting" name="cheatMenuSetting" id="cheatMenuNo" value="false" checked="checked"><label for="cheatMenuNo">No</label>
+              </div>
             </div>
             <button id="settingsCancel" class="cancel">Cancel</button>
             <input type="submit" id="settingsOK" class="dialogOK" value="OK">
@@ -426,14 +431,13 @@
       </div>
       <div class="hidden modal shadow" id="debugWindow">
         <header id="debugHeader" class="debugHeader white padding10 chunk alignCenter">
-           Debug
+           Cheat Menu
         </header>
         <div id="debugContainer" class="padding10 open">
           <form id="debugForm" class="alignCenter margin10">
             <div id="debugFundContainer">
-              Add funds:
-              <input type="radio" class="debugAdd" name="debugAdd" id="fundsYes" value="true" checked="checked"><label for="fundsYes">Yes</label>
-              <input type="radio" class="debugAdd" name="debugAdd" id="fundsNo" value="false"><label for="fundsNo">No</label>
+              <label for="cheatFundsAmount">Add funds:</label>
+              <input type="number" id="cheatFundsAmount" name="cheatFundsAmount" min="0" step="1000" value="100000">
             </div>
             <button id="debugCancel" class="cancel">Cancel</button>
             <input type="submit" id="debugOK" class="dialogOK" value="OK">

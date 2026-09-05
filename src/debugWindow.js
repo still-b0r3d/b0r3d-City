@@ -26,6 +26,7 @@ var DebugWindow = ModalWindow(function() {
 var debugCancelID = '#debugCancel';
 var debugFormID = '#debugForm';
 var debugOKID = '#debugOK';
+var cheatFundsAmountID = '#cheatFundsAmount';
 
 
 DebugWindow.prototype.close = function(actions) {
@@ -46,16 +47,16 @@ var submit = function(e) {
 
   var actions = [];
 
-  // Get element values
-  var shouldAdd = $('.debugAdd:checked').val();
-  if (shouldAdd === 'true')
-    actions.push({action: DebugWindow.ADD_FUNDS, data: {}});
+  var amount = parseInt($(cheatFundsAmountID).val(), 10);
+  if (amount > 0)
+    actions.push({action: DebugWindow.ADD_FUNDS, data: amount});
 
   this.close(actions);
 };
 
 
 DebugWindow.prototype.open = function() {
+  $(cheatFundsAmountID).val(100000);
   this._toggleDisplay();
 };
 

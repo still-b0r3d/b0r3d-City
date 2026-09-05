@@ -74,6 +74,7 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   this.dialogOpen = false;
   this._openWindow = null;
+  this.cheatMenuEnabled = false;
   this.mouse = null;
   this.lastCoord = null;
   this.simNeededBudget = false;
@@ -130,7 +131,8 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // ... the settings window
   this.handleSettingsRequest = makeWindowOpenHandler('settings', function() {
     return [{autoBudget: this.simulation.budget.autoBudget, autoBulldoze: BaseTool.getAutoBulldoze(),
-             speed: this.defaultSpeed, disasters: this.simulation.disasterManager.disastersEnabled}];
+             speed: this.defaultSpeed, disasters: this.simulation.disasterManager.disastersEnabled,
+             cheatMenu: this.cheatMenuEnabled}];
   }.bind(this));
   this.settingsWindow = new SettingsWindow(opacityLayerID, 'settingsWindow');
   this.settingsWindow.addEventListener(Messages.SETTINGS_WINDOW_CLOSED, this.handleSettingsWindowClosure.bind(this));
@@ -325,6 +327,11 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
         this.simulation.disasterManager.disastersEnabled = a.data;
         break;
 
+      case SettingsWindow.CHEAT_MENU_CHANGED:
+        this.cheatMenuEnabled = a.data;
+        $('#debug')[a.data ? 'show' : 'hide']();
+        break;
+
       default:
         console.warn('Unexpected action', a);
     }
@@ -340,7 +347,7 @@ Game.prototype.handleDebugWindowClosure = function(actions) {
 
     switch (a.action) {
       case DebugWindow.ADD_FUNDS:
-        this.simulation.budget.spend(-20000);
+        this.simulation.budget.spend(-a.data);
         break;
 
       default:

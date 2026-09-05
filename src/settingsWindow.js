@@ -36,6 +36,8 @@ var speedMedID = '#speedMed';
 var speedFastID = '#speedFast';
 var disastersYesID = '#disastersYes';
 var disastersNoID = '#disastersNo';
+var cheatMenuYesID = '#cheatMenuYes';
+var cheatMenuNoID = '#cheatMenuNo';
 
 
 SettingsWindow.prototype.close = function(actions) {
@@ -80,6 +82,13 @@ var submit = function(e) {
     shouldEnableDisasters = false;
   actions.push({action: SettingsWindow.DISASTERS_CHANGED, data: shouldEnableDisasters});
 
+  var shouldEnableCheatMenu = $('.cheatMenuSetting:checked').val();
+  if (shouldEnableCheatMenu === 'true')
+    shouldEnableCheatMenu = true;
+  else
+    shouldEnableCheatMenu = false;
+  actions.push({action: SettingsWindow.CHEAT_MENU_CHANGED, data: shouldEnableCheatMenu});
+
   this.close(actions);
 };
 
@@ -107,6 +116,11 @@ SettingsWindow.prototype.open = function(settingsData) {
   else
     $(disastersNoID).prop('checked', true);
 
+  if (settingsData.cheatMenu)
+    $(cheatMenuYesID).prop('checked', true);
+  else
+    $(cheatMenuNoID).prop('checked', true);
+
   this._toggleDisplay();
 };
 
@@ -125,6 +139,7 @@ defineAction('AUTOBUDGET');
 defineAction('AUTOBULLDOZE');
 defineAction('SPEED');
 defineAction('DISASTERS_CHANGED');
+defineAction('CHEAT_MENU_CHANGED');
 
 
 export { SettingsWindow };

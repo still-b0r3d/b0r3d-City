@@ -26,7 +26,6 @@ import { InfoBar } from './infoBar.js';
 import { InputStatus } from './inputStatus.js';
 import * as Messages from './messages.ts';
 import { MonsterTV } from './monsterTV.js';
-import { NagWindow } from './nagWindow.js';
 import { Notification } from './notification.js';
 import { QueryWindow } from './queryWindow.js';
 import { Random } from './random.ts';
@@ -80,27 +79,6 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this.simNeededBudget = false;
   this.isPaused = false;
   this.lastBadMessageTime = null;
-
-  var self = this;
-  if (!this.everClicked) {
-    this.nagger = window.setTimeout(function() {
-      self.dialogOpen = true;
-      self._openWindow = 'nagWindow';
-      self.nagWindow.open();
-    }, 30 * 60 * 1000);
-
-    $('.nag').each(function() {
-      $(this).click(function(e) {
-        if (self.nagger !== null) {
-          window.clearTimeout(self.nagger);
-        self.nagger = null;
-        self.everClicked = true;
-      }
-
-      return true;
-      });
-    });
-  }
 
   // Initialise monsterTV
   this.monsterTV = new MonsterTV(this.gameMap, tileSet, spriteSheet, this.gameCanvas.animationManager);
@@ -170,10 +148,6 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // ... the save confirmation window
   this.saveWindow = new SaveWindow(opacityLayerID, 'saveWindow');
   this.saveWindow.addEventListener(Messages.SAVE_WINDOW_CLOSED, this.genericDialogClosure);
-
-  // ... the nag confirmation window
-  this.nagWindow = new NagWindow(opacityLayerID, 'nagWindow');
-  this.nagWindow.addEventListener(Messages.NAG_WINDOW_CLOSED, this.genericDialogClosure);
 
   // ... the touch warn window
   this.touchWindow = new TouchWarnWindow(opacityLayerID, 'touchWarnWindow');

@@ -1,6 +1,5 @@
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import CopyPlugin from 'copy-webpack-plugin';
-import { GitRevisionPlugin } from 'git-revision-webpack-plugin';
 import HtmlWebpackPlugin  from 'html-webpack-plugin';
 import path from 'path';
 
@@ -96,12 +95,13 @@ function addProductionConfigTo(options) {
 }
 
 function getBuildId() {
-  // Technically don't need to use the webpack plugin, as not passing it to Webpack...
-  const gitPlugin = new GitRevisionPlugin({
-    commitHashCommand: `log -1 --pretty=format:'%h' main`
-  });
+  // b0r3d.org build numbering: b0r3d + today's date (YYYYMMDD).
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
 
-  return gitPlugin.commithash().slice(0, 12);
+  return `b0r3d${year}${month}${day}`;
 }
 
 function commonOptions() {

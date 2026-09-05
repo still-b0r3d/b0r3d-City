@@ -39,7 +39,6 @@ export const HELICOPTER_CRASHED = "Helicopter crashed";
 export const HIGH_CRIME = "High crime";
 export const HIGH_POLLUTION = "High pollution";
 export const MONSTER_SIGHTED = "Monster sighted";
-export const NAG_WINDOW_CLOSED = "Nag window closed";
 export const NEED_AIRPORT = "Airport needed";
 export const NEED_ELECTRICITY = "More power needed";
 export const NEED_FIRE_STATION = "Fire station needed";

@@ -41,6 +41,7 @@ var highScoreStatusID = '#highScoreStatus';
 var highScoreRowsID = '#highScoreRows';
 var highScoreCurrentScoreID = '#highScoreCurrentScore';
 var highScoreCurrentClassID = '#highScoreCurrentClass';
+var highScoreCurrentPopulationID = '#highScoreCurrentPopulation';
 
 
 var escapeHtml = function(s) {
@@ -50,27 +51,33 @@ var escapeHtml = function(s) {
 };
 
 
+var formatNumber = function(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+
 var renderScores = function(list) {
   if (!list || !list.length) {
-    $(highScoreRowsID).html('<tr><td colspan="4">No scores yet &mdash; be the first!</td></tr>');
+    $(highScoreRowsID).html('<tr><td colspan="5">No scores yet &mdash; be the first!</td></tr>');
     return;
   }
 
   var rows = list.map(function(entry, i) {
     return '<tr><td>' + (i + 1) + '</td><td>' + escapeHtml(entry.name) + '</td><td>' +
-      escapeHtml(entry.score) + '</td><td>' + escapeHtml(HighScoreWindow.levelToClassName(entry.level)) + '</td></tr>';
+      escapeHtml(entry.score) + '</td><td>' + escapeHtml(HighScoreWindow.levelToClassName(entry.level)) + '</td><td>' +
+      escapeHtml(formatNumber(entry.population || 0)) + '</td></tr>';
   });
   $(highScoreRowsID).html(rows.join(''));
 };
 
 
 var refreshScores = function() {
-  $(highScoreRowsID).html('<tr><td colspan="4">Loading&hellip;</td></tr>');
+  $(highScoreRowsID).html('<tr><td colspan="5">Loading&hellip;</td></tr>');
 
   $.getJSON('/api/' + GAME_KEY + '/scores').done(function(data) {
     renderScores(data.scores);
   }).fail(function() {
-    $(highScoreRowsID).html('<tr><td colspan="4">Leaderboard unreachable right now.</td></tr>');
+    $(highScoreRowsID).html('<tr><td colspan="5">Leaderboard unreachable right now.</td></tr>');
   });
 };
 
@@ -97,7 +104,7 @@ var submit = function(e) {
     url: '/api/' + GAME_KEY + '/submit',
     method: 'POST',
     contentType: 'application/json',
-    data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel})
+    data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel, population: self._currentPopulation})
   }).done(function(data) {
     renderScores(data.scores);
     $(highScoreStatusID).text(data.insertedId !== null && data.insertedId !== undefined ?
@@ -118,9 +125,11 @@ HighScoreWindow.prototype.open = function(data) {
   data = data || {};
   this._currentScore = data.score || 0;
   this._currentLevel = data.level || 1;
+  this._currentPopulation = data.population || 0;
 
   $(highScoreCurrentScoreID).text(this._currentScore);
   $(highScoreCurrentClassID).text(HighScoreWindow.levelToClassName(this._currentLevel));
+  $(highScoreCurrentPopulationID).text(formatNumber(this._currentPopulation));
   $(highScoreNameID).val('');
   $(highScoreStatusID).text('');
 

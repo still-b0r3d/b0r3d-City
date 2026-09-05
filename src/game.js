@@ -542,7 +542,8 @@ Game.prototype.handleHighScoreRequest = function() {
   this._openWindow = 'highScoreWindow';
   this.highScoreWindow.open({
     score: this.simulation.evaluation.cityScore,
-    level: HighScoreWindow.classNameToLevel(this.simulation.evaluation.cityClass)
+    level: HighScoreWindow.classNameToLevel(this.simulation.evaluation.cityClass),
+    population: this.simulation.evaluation.cityPop
   });
 };
 

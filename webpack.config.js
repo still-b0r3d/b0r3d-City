@@ -95,13 +95,16 @@ function addProductionConfigTo(options) {
 }
 
 function getBuildId() {
-  // b0r3d.org build numbering: b0r3d + today's date (YYYYMMDD).
+  // b0r3d.org build numbering: b0r3d + today's date (YYYYMMDD), plus a
+  // 24h HHMM time suffix so multiple same-day builds get distinct IDs.
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
 
-  return `b0r3d${year}${month}${day}`;
+  return `b0r3d${year}${month}${day}-${hours}${minutes}`;
 }
 
 function commonOptions() {

@@ -308,6 +308,8 @@ nav li {
 .nameLicense {
   margin-top: 1em;
   margin-bottom: 0.5em;
+  font-size: 10px;
+  opacity: 0.55;
 }
 
 #budgetForm > div:nth-child(9) {

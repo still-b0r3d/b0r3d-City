@@ -102,6 +102,8 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   $('#debugRequest').click(debugHandler.bind(this));
   $('#zoomInRequest').click(zoomInHandler.bind(this));
   $('#zoomOutRequest').click(zoomOutHandler.bind(this));
+  $('#infoDrawerToggle').click(infoDrawerToggleHandler);
+  $('#toolsDrawerToggle').click(toolsDrawerToggleHandler);
 });
 
 
@@ -421,6 +423,11 @@ var toolButtonHandler = function(e) {
     $(this.canvasID).addClass('helpPointer');
   }
 
+  // On mobile the tool palette is an overlay drawer -- close it once a tool's picked so
+  // the map underneath is immediately tappable, rather than making the player dismiss it
+  // manually first. A no-op on desktop, where this class is never set.
+  $('body').removeClass('showToolsDrawer');
+
   e.preventDefault();
 };
 
@@ -465,6 +472,21 @@ var zoomInHandler = function(e) {
 var zoomOutHandler = function(e) {
   e.preventDefault();
   this._gameCanvas.zoomOut();
+};
+
+
+// Below 768px wide, the info/menu and tools panels become toggleable overlay drawers
+// (see the CSS) instead of always-on. Mutually exclusive -- opening one closes the
+// other, since both fully open at once wouldn't fit next to each other on a phone.
+var infoDrawerToggleHandler = function(e) {
+  e.preventDefault();
+  $('body').toggleClass('showInfoDrawer').removeClass('showToolsDrawer');
+};
+
+
+var toolsDrawerToggleHandler = function(e) {
+  e.preventDefault();
+  $('body').toggleClass('showToolsDrawer').removeClass('showInfoDrawer');
 };
 
 

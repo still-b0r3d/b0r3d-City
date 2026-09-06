@@ -203,9 +203,13 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this.congratsWindow = new CongratsWindow(opacityLayerID, 'congratsWindow');
   this.congratsWindow.addEventListener(Messages.CONGRATS_WINDOW_CLOSED, this.genericDialogClosure);
 
-  // Listen for touches, so we can warn tablet users
-  this.touchListener = touchListener.bind(this);
-  window.addEventListener('touchstart', this.touchListener, false);
+  // Touch is a properly supported input now (zoom, pan, tap-to-place, and a mobile
+  // drawer layout all exist), so the old "you might be in for a bad time" warning this
+  // listener triggered no longer applies -- left disabled rather than deleted, along
+  // with TouchWarnWindow/#touchWarnWindow themselves, matching how orphaned-but-present
+  // pages/code are handled elsewhere on this site.
+  // this.touchListener = touchListener.bind(this);
+  // window.addEventListener('touchstart', this.touchListener, false);
 
   // Unhide controls
   this.revealControls();

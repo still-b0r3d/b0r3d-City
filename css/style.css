@@ -58,6 +58,31 @@ header h1 {
   margin-left: 50px;
 }
 
+/* :not(.initialHidden) rather than the shared .inlineblock class -- .inlineblock is
+   declared later in this file than .initialHidden, so at equal specificity it would
+   silently win and defeat the hiding before the game reveals this element */
+#mobileDrawerToggles:not(.initialHidden) {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.mobileDrawerToggle {
+  display: none;
+  width: auto;
+  height: auto;
+  padding: 6px 10px;
+  margin-left: 10px;
+  background-color: darkslategray;
+  color: white;
+  border: 1px solid white;
+  font-family: sans-serif;
+  font-size: 13px;
+}
+
+body.showInfoDrawer #infoDrawerToggle, body.showToolsDrawer #toolsDrawerToggle {
+  background-color: cadetblue;
+}
+
 main {
   position: absolute;
   top: 0;
@@ -518,6 +543,11 @@ nav li {
   z-index: 200;
 }
 
+#tooSmallInner {
+  max-width: 90vw;
+  box-sizing: border-box;
+}
+
 #tw {
   position: absolute;
   top: 300px;
@@ -812,9 +842,68 @@ nav li {
   }
 }
 
-@media (max-height: 582px) {
+@media (max-height: 400px) {
   #tooSmall[data-hasscript=true] {
     display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Below this width the left (info/menu) and right (tools) panel stacks no longer fit
+     next to each other and the canvas -- they become toggleable overlay drawers instead
+     of always-on. #monstertv and #debug aren't included: both already manage their own
+     show/hide independently of game start (inline style via jQuery .show()/.hide()), so
+     folding them into the drawer classes here would just fight that. */
+  #infobar, #miscButtons, #RCIContainer, #controls {
+    display: none;
+  }
+
+  body.showInfoDrawer #infobar,
+  body.showInfoDrawer #miscButtons,
+  body.showInfoDrawer #RCIContainer {
+    display: block;
+  }
+
+  body.showToolsDrawer #controls {
+    display: block;
+  }
+
+  .mobileDrawerToggle {
+    display: inline-block;
+  }
+
+  #title {
+    font-size: 18px;
+    margin-left: 10px;
+  }
+
+  header nav {
+    padding: 10px 5px;
+  }
+
+  header nav li {
+    padding: 10px 5px;
+  }
+
+  /* Title + toggle buttons + nav can't all fit on one line at phone widths -- let the
+     header wrap to a second row instead of a fixed height that everything overflows
+     (float doesn't wrap the way flex does, so this also drops the .left/.right floats) */
+  header {
+    height: auto;
+    min-height: 35px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  header .left, header nav {
+    float: none;
+  }
+
+  /* Generous fixed clearance for a possibly-two-row header, since #wrapper can't size
+     itself off a sibling's auto height without restructuring more than this needs to */
+  #wrapper {
+    top: 100px;
   }
 }
 
@@ -855,7 +944,7 @@ nav li {
   }
 }
 
-@media (max-width: 590px) {
+@media (max-width: 320px) {
   #tooSmall[data-hasscript=true] {
     display: block;
   }

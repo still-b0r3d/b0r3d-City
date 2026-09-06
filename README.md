@@ -5,7 +5,9 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-Renamed from "sim-b0r3d-city" (itself renamed from "micropolisJS") specifically to drop the "Sim...City" naming pattern the bundled [LICENSE](LICENSE)'s additional terms warn against, re: the SimCity trademark. The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
+Renamed from "sim-b0r3d-city" (itself renamed from "micropolisJS") to drop the "Sim...City" pattern the bundled [LICENSE](LICENSE)'s additional terms warn against — the SimCity trademark strikes again. Which makes this a fork of a fork of a game that's never once, in three-plus decades, been allowed to go by its own retail name: Maxis/EA open-sourced 1989's SimCity under the alias "Micropolis" specifically to sidestep this exact trademark, and here we are doing the identical dance for the identical reason. Some things just aren't allowed to have nice names.
+
+The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
 ## What's different from upstream
 

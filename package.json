@@ -10,6 +10,7 @@
     "url": "https://github.com/graememcc/micropolisJS/issues"
   },
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "build": "webpack --mode production",
     "watch": "webpack --watch --mode development",
@@ -17,12 +18,16 @@
     "test:watch": "jest --watch",
     "lint": "tslint src/*.ts test/*.ts",
     "dev": "webpack serve --mode development",
-    "production": "webpack serve --mode production"
+    "production": "webpack serve --mode production",
+    "electron:start": "electron .",
+    "electron:build": "npm run build && electron-builder --win portable"
   },
   "devDependencies": {
     "@types/jest": "30.0.0",
     "clean-webpack-plugin": "4.0.0",
     "copy-webpack-plugin": "13.0.0",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.15.3",
     "html-webpack-plugin": "5.6.3",
     "jest": "30.0.4",
     "ts-jest": "29.4.0",
@@ -37,5 +42,22 @@
   "readmeFilename": "README.md",
   "dependencies": {
     "jquery": "3.7.1"
+  },
+  "build": {
+    "appId": "org.b0r3d.b0r3d-city",
+    "productName": "b0r3d-city",
+    "directories": {
+      "output": "desktop"
+    },
+    "files": [
+      "electron/main.cjs",
+      "dist/**/*"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "b0r3d-city.exe"
+    }
   }
 }

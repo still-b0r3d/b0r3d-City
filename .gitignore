@@ -4,3 +4,5 @@ coverage/
 dist/
 node_modules/
 TODO
+desktop/win-unpacked/
+desktop/builder-debug.yml

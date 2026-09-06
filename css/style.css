@@ -405,9 +405,19 @@ nav li {
 }
 
 #infobar {
+  height: 150px;
+}
+
+/* Shared flow container for the #infobar/#miscButtons/#RCIContainer stack --
+   each panel's position derives from the flex column instead of hand-copied
+   top offsets, so only this rule (and its media-query overrides below) needs
+   to change if the stack's height budget changes. */
+#leftStack {
   position: absolute;
   top: 40px;
-  height: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
 }
 
 #loadingBanner[data-hasscript=false] {
@@ -415,8 +425,6 @@ nav li {
 }
 
 #miscButtons {
-  position: absolute;
-  top: 250px;
   height: 204px;
 }
 
@@ -466,8 +474,6 @@ nav li {
 }
 
 #RCIContainer {
-  position: absolute;
-  top: 514px;
   width: 140px;
   height: 140px;
   margin: 0px;
@@ -672,10 +678,6 @@ nav li {
     height: 15px;
   }
 
-  main {
-    bottom: 26px;
-  }
-
   .border-bottom {
     border: none;
   }
@@ -708,24 +710,17 @@ nav li {
     top: 544px;
   }
 
-  #infobar {
+  #leftStack {
     top: 30px;
+    gap: 30px;
   }
 
   #monstertv {
     top: 324px;
   }
 
-  #miscButtons {
-    top: 230px;
-  }
-
   #notifications {
     top: 563px;
-  }
-
-  #RCIContainer {
-    top: 484px;
   }
 
   #tw {
@@ -742,24 +737,17 @@ nav li {
     top: 504px;
   }
 
-  #infobar {
+  #leftStack {
     top: 20px;
+    gap: 20px;
   }
 
   #monstertv {
     top: 304px;
   }
 
-  #miscButtons {
-    top: 210px;
-  }
-
   #notifications {
     top: 533px;
-  }
-
-  #RCIContainer {
-    top: 454px;
   }
 
   #tw {
@@ -783,12 +771,9 @@ nav li {
     top: 460px;
   }
 
-  #infobar {
+  #leftStack {
     top: 10px;
-  }
-
-  #miscButtons {
-    top: 190px;
+    gap: 10px;
   }
 
   #monstertv {
@@ -797,10 +782,6 @@ nav li {
 
   #notifications {
     top: 503px;
-  }
-
-  #RCIContainer {
-    top: 424px;
   }
 
   #tw {
@@ -817,12 +798,9 @@ nav li {
     top: 396px;
   }
 
-  #infobar {
+  #leftStack {
     top: 0px;
-  }
-
-  #miscButtons {
-    top: 170px;
+    gap: 0px;
   }
 
   #monstertv {
@@ -831,10 +809,6 @@ nav li {
 
   #notifications {
     top: 473px;
-  }
-
-  #RCIContainer {
-    top: 394px;
   }
 
   #tw {

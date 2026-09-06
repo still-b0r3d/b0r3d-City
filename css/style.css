@@ -558,6 +558,15 @@ nav li {
   box-sizing: border-box;
 }
 
+/* Desktop mouse users don't need this -- shown only at mobile widths, see the
+   max-width:768px override below */
+#touchNotice {
+  display: none;
+  font-size: 13px;
+  font-style: italic;
+  color: dimgray;
+}
+
 #tw {
   position: absolute;
   top: 300px;
@@ -846,18 +855,12 @@ nav li {
     display: block;
   }
 
-  /* Title + 3 toggle buttons + the About/GitHub nav links genuinely don't fit on one
-     phone-width row no matter how tightly they're packed (measured ~520px combined
-     at 393px viewport even after the trims below) -- so instead of fighting that,
-     the nav is hidden entirely once the game's own controls appear. Pre-game it's
-     just title+nav on the row, which fits comfortably on its own. */
-  #mobileDrawerToggles:not(.initialHidden) ~ nav {
-    display: none;
-  }
-
-  /* Trimmed from the desktop defaults (10px/20px padding, 10px margin) -- the 3
-     toggle buttons (Menu/Tools/the cancel-tool button) plus the title still need to
-     fit in ~375-412px of real phone width on their own now that nav is out of the way. */
+  /* Trimmed from the desktop defaults (10px/20px padding, 10px margin) -- the title
+     plus the 3 toggle buttons (Menu/Tools/the cancel-tool button) need to fit in
+     ~375-412px of real phone width. The About/GitHub links used to live here too and
+     were the reason this row didn't fit even trimmed -- they've since moved down to
+     the footer, next to the b0r3d.org link (see #footerLinks), which is what actually
+     fixed the wrapping rather than this trimming alone. */
   .mobileDrawerToggle {
     display: inline-block;
     padding: 4px 6px;
@@ -870,18 +873,9 @@ nav li {
     margin-left: 6px;
   }
 
-  header nav {
-    padding: 10px 3px;
-  }
-
-  header nav li {
-    padding: 10px 3px;
-    font-size: 13px;
-  }
-
-  /* Title + toggle buttons + nav can't all fit on one line at phone widths -- let the
-     header wrap to a second row instead of a fixed height that everything overflows
-     (float doesn't wrap the way flex does, so this also drops the .left/.right floats) */
+  /* Fallback for phones too narrow even for title+toggles alone -- wraps to a second
+     row instead of a fixed height that everything overflows (float doesn't wrap the
+     way flex does, so this also drops the .left float) */
   header {
     height: auto;
     min-height: 35px;
@@ -890,22 +884,36 @@ nav li {
     align-items: center;
   }
 
-  header .left, header nav {
+  header .left {
     float: none;
   }
 
-  /* Generous fixed clearance for a possibly-two-row header, since #wrapper can't size
-     itself off a sibling's auto height without restructuring more than this needs to */
+  /* With the About/GitHub nav gone, the header fits its one row (min-height 35px)
+     on virtually every real phone now -- a little more than that for breathing room,
+     rather than the old fixed 100px clearance sized for a two-row header. #wrapper
+     can't size itself off a sibling's auto height without restructuring more than
+     this needs to, so it stays a fixed guess, just a much closer one now. */
   #wrapper {
-    top: 100px;
+    top: 40px;
   }
 
   /* All the pre-game/dialog boxes below (.centred, .modal and their fixed-width
      variants) were sized for desktop and simply run off the edges of a phone-width
      screen -- #tooSmallInner was the one place that already used the vw-relative,
-     border-box pattern that fixes this; extended here to the rest. */
+     border-box pattern that fixes this; extended here to the rest. max-height +
+     overflow-y matters just as much as max-width: Budget/Settings/High Scores all
+     stack their content into a single column at this width (see #budgetForm below),
+     which makes them taller, not just narrower -- without a height cap a tall enough
+     one pushes its own OK/Cancel buttons off-screen with no way to reach them. The
+     dvh line is a progressive enhancement over vh for browsers that support it --
+     real mobile browsers resize their address bar in and out of the viewport, which
+     vh doesn't track but dvh does, so a dialog sized against vh can still end up
+     taller than the actually-visible area. */
   .centred, #tooSmallInner, .modal {
     max-width: 94vw;
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
     box-sizing: border-box;
   }
 
@@ -948,6 +956,10 @@ nav li {
     margin-top: 10px;
   }
 
+  #touchNotice {
+    display: block;
+  }
+
   #start {
     max-width: 94vw;
     box-sizing: border-box;
@@ -959,14 +971,22 @@ nav li {
     box-sizing: border-box;
   }
 
-  /* The Load Game table's columns/buttons keep their desktop sizing rather than
-     being redesigned to stack -- if they don't fit, the table scrolls horizontally
-     inside the dialog instead of clipping. */
-  #loadTableEl {
+  /* The Load Game and High Score tables' columns/buttons keep their desktop sizing
+     rather than being redesigned to stack -- if they don't fit, the table scrolls
+     horizontally inside the dialog instead of clipping. */
+  #loadTableEl, #highScoreTableEl {
     max-width: 100%;
     overflow-x: auto;
     display: block;
     white-space: nowrap;
+  }
+
+  /* Fixed desktop width, same overflow problem as the dialogs above -- this is often
+     the very first thing shown once a game starts (the welcome notification), so it
+     matters as much as any dialog. */
+  #notifications {
+    max-width: 94vw;
+    box-sizing: border-box;
   }
 }
 
@@ -1090,10 +1110,9 @@ nav li {
   font-size: 11px;
 }
 
-#b0r3dHomeLink {
+#footerLinks {
   position: absolute;
   right: 5px;
   bottom: 5px;
   font-size: 11px;
-  margin-left: 0;
 }

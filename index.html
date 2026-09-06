@@ -35,12 +35,6 @@
         <button id="toolsDrawerToggle" class="mobileDrawerToggle" type="button">&#128295; Tools</button>
         <button id="cancelToolToggle" class="mobileDrawerToggle" type="button" title="Deselect the current tool">&#10006; Tool</button>
       </div>
-      <nav class="white right padding10 inlineblock">
-        <ul>
-          <li class="padding10"><a href="about.html" target="_blank">About</a></li>
-          <li class="padding10"><a href="https://github.com/still-b0r3d/b0r3d-City" target="_blank">GitHub</a></li>
-        </ul>
-      </nav>
     </header>
     <div id="wrapper">
       <main id="canvasContainer">
@@ -49,6 +43,7 @@
         <div id="splash" class="mintcream awaitGeneration open shadow padding10 centred">
           <h2 class="chunk alignCenter">Welcome!</h2>
           <p>b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a>, a handmade Javascript port of the open-source city simulator <cite>Micropolis</cite></p>
+          <p id="touchNotice">Heads up: touch controls (tap-to-place, drag-to-pan, pinch-to-zoom) are still experimental&mdash;everything should work, but expect some rough edges.</p>
           <div id="splashContainer"></div>
           <div id="splashButtonContainer">
             <div id="splashButtons">
@@ -192,7 +187,11 @@
       </main>
       <footer id="footer" class="alignCenter chunk white padding10">
         <div id="build">Build: <%= htmlWebpackPlugin.options.gitHash %></div>
-        <a id="b0r3dHomeLink" href="https://b0r3d.org">b0r3d.org</a>
+        <div id="footerLinks">
+          <a href="about.html" target="_blank">About</a> &middot;
+          <a href="https://github.com/still-b0r3d/b0r3d-City" target="_blank">GitHub</a> &middot;
+          <a id="b0r3dHomeLink" href="https://b0r3d.org">b0r3d.org</a>
+        </div>
       </footer>
       <div class="hidden modal shadow" id="budget">
         <header id="budgetHeader" class="budgetHeader padding10 chunk alignCenter">

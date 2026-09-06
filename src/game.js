@@ -148,9 +148,9 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this.screenshotLinkWindow = new ScreenshotLinkWindow(opacityLayerID, 'screenshotLinkWindow');
   this.screenshotLinkWindow.addEventListener(Messages.SCREENSHOT_LINK_CLOSED, this.genericDialogClosure);
 
-  // ... the save confirmation window
+  // ... the save window
   this.saveWindow = new SaveWindow(opacityLayerID, 'saveWindow');
-  this.saveWindow.addEventListener(Messages.SAVE_WINDOW_CLOSED, this.genericDialogClosure);
+  this.saveWindow.addEventListener(Messages.SAVE_WINDOW_CLOSED, this.handleSaveWindowClosure.bind(this));
 
   // ... the high score window
   this.highScoreWindow = new HighScoreWindow(opacityLayerID, 'highScoreWindow');
@@ -215,26 +215,34 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this.tick();
 
   // Paint the map
+  this.frameCount = 0;
+  this.animStart = new Date();
+  this.lastElapsed = -1;
+
   var debug = Config.debug || Config.gameDebug;
   if (debug) {
+    this.cheatMenuEnabled = true;
     $('#debug').toggle();
-    this.frameCount = 0;
-    this.animStart = new Date();
-    this.lastElapsed = -1;
   }
 
   this.commonAnimate = commonAnimate.bind(this);
-  this.animate = (debug ? debugAnimate : this.commonAnimate).bind(this);
+  this.animate = animate.bind(this);
   this.animate();
 }
 
 
-Game.prototype.save = function() {
+Game.prototype.save = function(saveName) {
   var saveData = {name: this.name, everClicked: this.everClicked};
   BaseTool.save(saveData);
   this.simulation.save(saveData);
 
-  Storage.saveGame(saveData);
+  var meta = {
+    population: this.simulation.evaluation.cityPop,
+    cityClass: this.simulation.evaluation.cityClass,
+    date: this.simulation.getDate()
+  };
+
+  Storage.saveGame(saveName, saveData, meta);
 };
 
 
@@ -335,6 +343,11 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
 
       case SettingsWindow.CHEAT_MENU_CHANGED:
         this.cheatMenuEnabled = a.data;
+        if (a.data) {
+          this.frameCount = 0;
+          this.animStart = new Date();
+          this.lastElapsed = -1;
+        }
         $('#debug')[a.data ? 'show' : 'hide']();
         break;
 
@@ -530,10 +543,23 @@ Game.prototype.handleTool = function(data) {
 
 
 Game.prototype.handleSave = function() {
-  this.save();
+  if (this.dialogOpen) {
+    console.warn('Request made to open save window. There is a dialog open!');
+    return;
+  }
+
   this.dialogOpen = true;
   this._openWindow = 'saveWindow';
-  this.saveWindow.open();
+  this.saveWindow.open({defaultName: this.name, saves: Storage.listSaves()});
+};
+
+
+Game.prototype.handleSaveWindowClosure = function(name) {
+  this.dialogOpen = false;
+  this._openWindow = null;
+
+  if (name)
+    this.save(name);
 };
 
 
@@ -756,16 +782,19 @@ var commonAnimate = function() {
 };
 
 
-var debugAnimate = function() {
-  var date = new Date();
-  var elapsed = Math.floor((date - this.animStart) / 1000);
+var animate = function() {
+  if (this.cheatMenuEnabled) {
+    var date = new Date();
+    var elapsed = Math.floor((date - this.animStart) / 1000);
 
-  if (elapsed > this.lastElapsed && this.frameCount > 0) {
-    $('#fpsValue').text(Math.floor(this.frameCount/elapsed));
-    this.lastElapsed = elapsed;
+    if (elapsed > this.lastElapsed && this.frameCount > 0) {
+      $('#fpsValue').text(Math.floor(this.frameCount/elapsed));
+      this.lastElapsed = elapsed;
+    }
+
+    this.frameCount++;
   }
 
-  this.frameCount++;
   this.commonAnimate();
 };
 

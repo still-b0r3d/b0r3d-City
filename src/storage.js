@@ -13,31 +13,110 @@
 
 import { MiscUtils } from './miscUtils.js';
 
-// A very thin wrapper around localStorage, in case we wish to move to some other storage mechanism
-// (such as indexedDB) in the future
+// A thin wrapper around localStorage, in case we wish to move to some other storage mechanism
+// (such as indexedDB) in the future.
+//
+// Saves are named slots: each save's game data lives under its own
+// KEY_PREFIX + slug(name) key, and an index (an array of {id, name, savedAt, meta})
+// under INDEX_KEY lets us list/sort saves without loading every blob.
 
-var getSavedGame = function() {
-  var savedGame = window.localStorage.getItem(this.KEY);
+var slugify = function(name) {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'save';
+};
 
-  if (savedGame !== null) {
-    savedGame = JSON.parse(savedGame);
 
-    if (savedGame.version !== this.CURRENT_VERSION)
-      this.transitionOldSave(savedGame);
+var readIndex = function() {
+  var raw = window.localStorage.getItem(Storage.INDEX_KEY);
+  return raw === null ? [] : JSON.parse(raw);
+};
 
-    // Flag as a saved game for Game/Simulation etc...
-    savedGame.isSavedGame = true;
+
+var writeIndex = function(index) {
+  window.localStorage.setItem(Storage.INDEX_KEY, JSON.stringify(index));
+};
+
+
+// Versions prior to multi-slot saves kept a single save under one fixed key.
+// Fold it into the index (once) so an existing save isn't orphaned/lost.
+var migrateLegacySave = function() {
+  var legacy = window.localStorage.getItem(Storage.LEGACY_KEY);
+  if (legacy === null)
+    return;
+
+  var index = readIndex();
+  if (!index.some(function(entry) { return entry.id === 'legacy'; })) {
+    var gameData = JSON.parse(legacy);
+
+    if (gameData.version !== Storage.CURRENT_VERSION)
+      transitionOldSave(gameData);
+
+    window.localStorage.setItem(Storage.KEY_PREFIX + 'legacy', JSON.stringify(gameData));
+    index.push({id: 'legacy', name: gameData.name || 'Recovered save', savedAt: new Date().toISOString(), meta: {}});
+    writeIndex(index);
   }
+
+  window.localStorage.removeItem(Storage.LEGACY_KEY);
+};
+
+
+var listSaves = function() {
+  migrateLegacySave();
+
+  return readIndex().sort(function(a, b) {
+    return b.savedAt.localeCompare(a.savedAt);
+  });
+};
+
+
+var saveExists = function(name) {
+  var id = slugify(name);
+  return readIndex().some(function(entry) { return entry.id === id; });
+};
+
+
+var getSave = function(id) {
+  var raw = window.localStorage.getItem(Storage.KEY_PREFIX + id);
+  if (raw === null)
+    return null;
+
+  var savedGame = JSON.parse(raw);
+
+  if (savedGame.version !== this.CURRENT_VERSION)
+    this.transitionOldSave(savedGame);
+
+  // Flag as a saved game for Game/Simulation etc...
+  savedGame.isSavedGame = true;
 
   return savedGame;
 };
 
 
-var saveGame = function(gameData) {
-  gameData.version = this.CURRENT_VERSION;
-  gameData = JSON.stringify(gameData);
+var saveGame = function(name, gameData, meta) {
+  migrateLegacySave();
 
-  window.localStorage.setItem(this.KEY, gameData);
+  var id = slugify(name);
+  var index = readIndex();
+  var isNewSlot = !index.some(function(entry) { return entry.id === id; });
+
+  // Overwriting an existing slot never grows the save count, so only a
+  // brand new name is checked against the cap.
+  if (isNewSlot && index.length >= Storage.MAX_SAVES)
+    return null;
+
+  gameData.version = this.CURRENT_VERSION;
+  window.localStorage.setItem(Storage.KEY_PREFIX + id, JSON.stringify(gameData));
+
+  index = index.filter(function(entry) { return entry.id !== id; });
+  index.push({id: id, name: name, savedAt: new Date().toISOString(), meta: meta || {}});
+  writeIndex(index);
+
+  return id;
+};
+
+
+var deleteSave = function(id) {
+  window.localStorage.removeItem(Storage.KEY_PREFIX + id);
+  writeIndex(readIndex().filter(function(entry) { return entry.id !== id; }));
 };
 
 
@@ -62,14 +141,20 @@ var transitionOldSave = function(savedGame) {
 
 
 var Storage = {
-  getSavedGame: getSavedGame,
+  listSaves: listSaves,
+  saveExists: saveExists,
+  getSave: getSave,
   saveGame: saveGame,
+  deleteSave: deleteSave,
   transitionOldSave: transitionOldSave
 };
 
 
 Object.defineProperty(Storage, 'CURRENT_VERSION', MiscUtils.makeConstantDescriptor(3));
-Object.defineProperty(Storage, 'KEY', MiscUtils.makeConstantDescriptor('micropolisJSGame'));
+Object.defineProperty(Storage, 'LEGACY_KEY', MiscUtils.makeConstantDescriptor('micropolisJSGame'));
+Object.defineProperty(Storage, 'KEY_PREFIX', MiscUtils.makeConstantDescriptor('micropolisJSGame_'));
+Object.defineProperty(Storage, 'INDEX_KEY', MiscUtils.makeConstantDescriptor('micropolisJSSaveIndex'));
+Object.defineProperty(Storage, 'MAX_SAVES', MiscUtils.makeConstantDescriptor(3));
 Object.defineProperty(Storage, 'canStore', MiscUtils.makeConstantDescriptor(window.localStorage !== undefined));
 
 

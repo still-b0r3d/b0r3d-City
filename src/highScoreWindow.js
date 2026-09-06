@@ -15,9 +15,11 @@ import { SiteEnv } from './siteEnv.js';
 
 // still.b0r3d.org's shared per-game leaderboard backend (see GAMES in
 // still-app.py) only allows [a-z0-9_]+ in its game-key URL segment, so this
-// has to be an underscored key even though the game displays as
-// "sim-b0r3d-city". SiteEnv picks the main-site vs beta-build key so the
-// two deployments' scores never mix (see SiteEnv.leaderboardKey).
+// stays the underscored `sim_b0r3d_city` key from before the game was
+// renamed to "b0r3d-city" -- purely an internal identifier now, kept as-is
+// to avoid a backend/data migration for no user-visible benefit. SiteEnv
+// picks the main-site vs beta-build key so the two deployments' scores
+// never mix (see SiteEnv.leaderboardKey).
 var GAME_KEY = SiteEnv.leaderboardKey();
 
 // The leaderboard backend always lives on still.b0r3d.org regardless of

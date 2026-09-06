@@ -61,7 +61,7 @@ header h1 {
 main {
   position: absolute;
   top: 0;
-  bottom: 55px;
+  bottom: 35px;
   width: 100%;
   overflow: hidden;
 }
@@ -488,6 +488,12 @@ nav li {
   display: none;
   text-align: center;
   font-size: 18px;
+}
+
+#loadList {
+  display: none;
+  width: 500px;
+  text-align: center;
 }
 
 #statisticsList, .queryList {
@@ -919,4 +925,12 @@ nav li {
   position: absolute;
   left: 5px;
   bottom: 5px;
+}
+
+#footer {
+  height: 2.2em;
+}
+
+#footer #build {
+  font-size: 11px;
 }

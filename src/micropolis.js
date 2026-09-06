@@ -107,7 +107,7 @@ if (!SiteEnv.isMainSite()) {
 
 var tweetButton = document.querySelector('.twitter-share-button');
 if (tweetButton) {
-  var gameLabel = SiteEnv.isMainSite() ? 'sim-b0r3d-city' : 'sim-b0r3d-city (beta build)';
+  var gameLabel = SiteEnv.isMainSite() ? 'b0r3d-city' : 'b0r3d-city (beta build)';
   var gameUrl = window.location.origin + window.location.pathname;
   tweetButton.setAttribute('data-text', "I'm city-building like it's 1989! Playing " + gameLabel + ', a HTML5 retro city-builder ' + gameUrl);
 }

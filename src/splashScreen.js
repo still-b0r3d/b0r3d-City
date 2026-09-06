@@ -19,6 +19,7 @@ import { MapGenerator } from './mapGenerator.js';
 import { Simulation } from './simulation.js';
 import { SplashCanvas } from './splashCanvas.js';
 import { Storage } from './storage.js';
+import { Text } from './text.js';
 
 /*
  *
@@ -58,11 +59,12 @@ function SplashScreen(tileSet, snowTileSet, spriteSheet) {
   // difficulty level and city name before launching the game properly
   $('#splashGenerate').click(regenerateMap.bind(this));
   $('#splashPlay').click(acquireNameAndDifficulty.bind(this));
-  $('#splashLoad').click(handleLoad.bind(this));
+  $('#splashLoad').click(showLoadList.bind(this));
+  $('#loadBack').click(hideLoadList.bind(this));
 
   // Conditionally enable load/save buttons
   $('#saveRequest').prop('disabled', !Storage.canStore);
-  $('#splashLoad').prop('disabled', !(Storage.canStore && Storage.getSavedGame() !== null));
+  $('#splashLoad').prop('disabled', !(Storage.canStore && Storage.listSaves().length > 0));
 
   // Paint the minimap
   this.splashCanvas = new SplashCanvas('splashContainer', tileSet);
@@ -99,12 +101,85 @@ var exposeCheatAPI = function(g) {
 };
 
 
-// Fetches game data from the storage manager, and launches the game. We won't return from here
-var handleLoad = function(e) {
+var escapeHtml = function(s) {
+  return String(s).replace(/[&<>"']/g, function(ch) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
+  });
+};
+
+
+var describeSave = function(entry) {
+  var meta = entry.meta || {};
+  var bits = [];
+
+  if (meta.date)
+    bits.push(Text.months[meta.date.month] + ' ' + meta.date.year);
+
+  if (meta.population !== undefined)
+    bits.push(meta.population + ' pop.');
+
+  if (meta.cityClass !== undefined && Text.cityClass[meta.cityClass])
+    bits.push(Text.cityClass[meta.cityClass]);
+
+  return bits.join(', ');
+};
+
+
+// self is the SplashScreen instance (its tileSet/snowTileSet/spriteSheet are
+// needed to launch a Game once a save is picked) -- threaded through explicitly
+// rather than relying on jQuery's `this`, since rows get rebound after a delete.
+var renderLoadList = function(self) {
+  var saves = Storage.listSaves();
+
+  if (!saves.length) {
+    $('#loadRows').html('<tr><td colspan="4">No saves yet.</td></tr>');
+    return;
+  }
+
+  var rows = saves.map(function(entry) {
+    return '<tr><td>' + escapeHtml(entry.name) + '</td><td>' + escapeHtml(describeSave(entry)) +
+      '</td><td><button type="button" class="loadRowLoad" data-id="' + escapeHtml(entry.id) + '">Load</button></td>' +
+      '<td><button type="button" class="cancel loadRowDelete" data-id="' + escapeHtml(entry.id) + '">Delete</button></td></tr>';
+  });
+
+  $('#loadRows').html(rows.join(''));
+
+  $('.loadRowLoad').on('click', function(e) {
+    loadSave.call(self, e);
+  });
+
+  $('.loadRowDelete').on('click', function() {
+    var id = $(this).data('id');
+    if (window.confirm('Delete this save? This cannot be undone.')) {
+      Storage.deleteSave(id);
+      renderLoadList(self);
+      $('#splashLoad').prop('disabled', !(Storage.canStore && Storage.listSaves().length > 0));
+    }
+  });
+};
+
+
+var showLoadList = function(e) {
+  e.preventDefault();
+  renderLoadList(this);
+  $('#splash').toggle();
+  $('#loadList').toggle();
+};
+
+
+var hideLoadList = function(e) {
+  e.preventDefault();
+  $('#loadList').toggle();
+  $('#splash').toggle();
+};
+
+
+// Fetches the chosen save's game data from the storage manager, and launches the game.
+// We won't return from here.
+var loadSave = function(e) {
   e.preventDefault();
 
-  var savedGame = Storage.getSavedGame();
-
+  var savedGame = Storage.getSave($(e.currentTarget).data('id'));
   if (savedGame === null)
     return;
 
@@ -112,12 +187,13 @@ var handleLoad = function(e) {
   $('#splashLoad').off('click');
   $('#splashGenerate').off('click');
   $('#splashPlay').off('click');
+  $('#loadBack').off('click');
 
   // Hide the splashscreen UI
-  $('#splash').toggle();
+  $('#loadList').toggle();
 
   // Launch
-  var g = new Game(savedGame, this.tileSet, this.snowTileSet, this.spriteSheet, Simulation.LEVEL_EASY, name);
+  var g = new Game(savedGame, this.tileSet, this.snowTileSet, this.spriteSheet, Simulation.LEVEL_EASY);
   exposeCheatAPI(g);
 };
 

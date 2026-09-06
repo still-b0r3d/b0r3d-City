@@ -79,6 +79,10 @@ header h1 {
   font-size: 13px;
 }
 
+#cancelToolToggle {
+  background-color: darkred;
+}
+
 body.showInfoDrawer #infoDrawerToggle, body.showToolsDrawer #toolsDrawerToggle {
   background-color: cadetblue;
 }
@@ -842,21 +846,37 @@ nav li {
     display: block;
   }
 
+  /* Title + 3 toggle buttons + the About/GitHub nav links genuinely don't fit on one
+     phone-width row no matter how tightly they're packed (measured ~520px combined
+     at 393px viewport even after the trims below) -- so instead of fighting that,
+     the nav is hidden entirely once the game's own controls appear. Pre-game it's
+     just title+nav on the row, which fits comfortably on its own. */
+  #mobileDrawerToggles:not(.initialHidden) ~ nav {
+    display: none;
+  }
+
+  /* Trimmed from the desktop defaults (10px/20px padding, 10px margin) -- the 3
+     toggle buttons (Menu/Tools/the cancel-tool button) plus the title still need to
+     fit in ~375-412px of real phone width on their own now that nav is out of the way. */
   .mobileDrawerToggle {
     display: inline-block;
+    padding: 4px 6px;
+    margin-left: 4px;
+    font-size: 12px;
   }
 
   #title {
-    font-size: 18px;
-    margin-left: 10px;
+    font-size: 16px;
+    margin-left: 6px;
   }
 
   header nav {
-    padding: 10px 5px;
+    padding: 10px 3px;
   }
 
   header nav li {
-    padding: 10px 5px;
+    padding: 10px 3px;
+    font-size: 13px;
   }
 
   /* Title + toggle buttons + nav can't all fit on one line at phone widths -- let the
@@ -878,6 +898,75 @@ nav li {
      itself off a sibling's auto height without restructuring more than this needs to */
   #wrapper {
     top: 100px;
+  }
+
+  /* All the pre-game/dialog boxes below (.centred, .modal and their fixed-width
+     variants) were sized for desktop and simply run off the edges of a phone-width
+     screen -- #tooSmallInner was the one place that already used the vw-relative,
+     border-box pattern that fixes this; extended here to the rest. */
+  .centred, #tooSmallInner, .modal {
+    max-width: 94vw;
+    box-sizing: border-box;
+  }
+
+  #statisticsList, .queryList {
+    max-width: 100%;
+    padding: 0 10px;
+    box-sizing: border-box;
+  }
+
+  /* #splash alone has a two-column layout (map preview + buttons) built from fixed
+     pixel offsets tuned for its 540px desktop width, so capping its own width isn't
+     enough -- those children need to become normal flow so they actually reflow
+     into the narrower box instead of sitting at their old absolute offsets. */
+  #splash {
+    width: 94vw;
+    max-width: 94vw;
+    height: auto;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  #splashContainer {
+    position: static;
+    margin-top: 10px;
+  }
+
+  #splashContainer canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+
+  #splashButtonContainer, #splashButtons {
+    position: static;
+  }
+
+  #splashButtonContainer {
+    margin-top: 10px;
+  }
+
+  #start {
+    max-width: 94vw;
+    box-sizing: border-box;
+  }
+
+  #loadList {
+    width: 94vw;
+    max-width: 94vw;
+    box-sizing: border-box;
+  }
+
+  /* The Load Game table's columns/buttons keep their desktop sizing rather than
+     being redesigned to stack -- if they don't fit, the table scrolls horizontally
+     inside the dialog instead of clipping. */
+  #loadTableEl {
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+    white-space: nowrap;
   }
 }
 

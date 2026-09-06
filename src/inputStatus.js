@@ -23,6 +23,31 @@ import { MiscUtils } from './miscUtils.js';
 // counting as a drag/pan
 var TAP_MOVE_THRESHOLD = 10;
 
+// How much the distance between two touches must change (as a ratio) to trigger one
+// discrete pinch-zoom step -- e.g. 1.3 means the fingers have to move 30% further apart
+// (or closer together) before zooming in (or out) one ZOOM_LEVELS step.
+var PINCH_ZOOM_STEP_RATIO = 1.3;
+
+// How long (in ms) a draggable tool's touch-down placement is held back before
+// committing, giving a second finger landing moments later (the start of a two-finger
+// pan) a chance to cancel it first -- see touchStartHandler. Committed early, on the
+// first touchmove or touchend, if either fires before this expires, so real single-
+// finger taps/drags are only ever delayed by a few ms in practice, not the full amount.
+var PENDING_PLACEMENT_DELAY = 50;
+
+
+var getTouchDistance = function(touch0, touch1) {
+  var dx = touch0.clientX - touch1.clientX;
+  var dy = touch0.clientY - touch1.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+
+var getTouchMidpoint = function(touches) {
+  return {x: (touches[0].clientX + touches[1].clientX) / 2,
+          y: (touches[0].clientY + touches[1].clientY) / 2};
+};
+
 
 var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.gameTools = new GameTools(map);
@@ -50,11 +75,20 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this._lastdragX = -1;
   this._lastdragY = -1;
 
-  // Touch panning (one-finger drag scrolls the camera when no draggable tool is active)
+  // Touch panning (one-finger drag scrolls the camera when no draggable tool is active;
+  // with two fingers down, pan tracks their midpoint instead of a single finger, so pan
+  // and pinch-zoom -- which reads the *distance* between the same two touches -- don't
+  // interfere with each other)
   this._panLastX = null;
   this._panLastY = null;
   this._panAccumX = 0;
   this._panAccumY = 0;
+  this._pinchStartDist = null;
+
+  // See PENDING_PLACEMENT_DELAY above
+  this._pendingPlacementTimer = null;
+  this._pendingPlacementX = -1;
+  this._pendingPlacementY = -1;
 
   // Touch tap-vs-drag detection
   this._touchStartX = null;
@@ -104,6 +138,7 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   $('#zoomOutRequest').click(zoomOutHandler.bind(this));
   $('#infoDrawerToggle').click(infoDrawerToggleHandler);
   $('#toolsDrawerToggle').click(toolsDrawerToggleHandler);
+  $('#cancelToolToggle').click(cancelToolHandler.bind(this));
 });
 
 
@@ -285,9 +320,11 @@ var canvasClickHandler = function(e) {
 //   - no draggable tool in progress: the drag pans the camera instead (see the
 //     accumulator logic below, tile-quantized exactly like the keyboard controls, since
 //     the engine assumes an integer tile origin throughout)
-// A second finger touching down always pans instead, regardless of which of the above
-// applies -- otherwise a draggable tool has no way to pan at all, since one finger is
-// already spoken for by painting. See the e.touches.length >= 2 branches below.
+// A second finger touching down always pans (by the two touches' midpoint) instead,
+// regardless of which of the above applies -- otherwise a draggable tool has no way to
+// pan at all, since one finger is already spoken for by painting -- and also enables
+// pinch-to-zoom, read from how the distance between the two touches changes over the
+// same gesture. See the e.touches.length >= 2 branches below.
 var touchStartHandler = function(e) {
   var touch = e.touches[0];
   if (!touch)
@@ -296,21 +333,30 @@ var touchStartHandler = function(e) {
   if (e.touches.length >= 2) {
     // A second finger just came down: switch to a two-finger pan regardless of the
     // selected tool, cancelling any in-progress single-finger paint so a multi-touch
-    // gesture never also places something. (If a draggable tool was already painting
-    // when the second finger landed, the one tile painted before this event fired is
-    // a rare, harmless cosmetic edge case -- not worth delaying every single-finger tap
-    // to avoid.)
+    // gesture never also places something.
     if (this._dragging) {
       this._dragging = false;
       this._lastDragX = -1;
       this._lastDragY = -1;
     }
 
+    // Cancels a still-pending touch-down placement from PENDING_PLACEMENT_DELAY ago
+    // (see touchStartHandler's single-touch branch below) -- this is the case that
+    // guard alone doesn't cover: without this, the first finger's draggable-tool
+    // placement would still fire on its own timer a moment later even though the
+    // gesture turned out to be a two-finger pan, not a paint.
+    if (this._pendingPlacementTimer !== null) {
+      clearTimeout(this._pendingPlacementTimer);
+      this._pendingPlacementTimer = null;
+    }
+
     this._touchMoved = true; // mid-gesture now; never treat a later touchend as a fresh tap
-    this._panLastX = touch.clientX;
-    this._panLastY = touch.clientY;
+    var midpoint = getTouchMidpoint(e.touches);
+    this._panLastX = midpoint.x;
+    this._panLastY = midpoint.y;
     this._panAccumX = 0;
     this._panAccumY = 0;
+    this._pinchStartDist = getTouchDistance(e.touches[0], e.touches[1]);
     return;
   }
 
@@ -334,11 +380,31 @@ var touchStartHandler = function(e) {
   var modifierHeld = e.shiftKey || e.altKey || e.ctrlKey || e.metaKey;
 
   if (this.currentTool !== null && this.currentTool.isDraggable && !modifierHeld) {
-    this._dragging = true;
-    this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
-    this._lastDragX = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
-    this._lastDragY = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
+    // Deferred rather than placed immediately: a second finger landing moments later
+    // (the start of a two-finger pan, which physically can't touch down in the same
+    // event as the first) would otherwise still leave this one tile placed even though
+    // touchStartHandler's e.touches.length >= 2 branch cancels the *rest* of the drag.
+    // Committed early -- by touchMoveHandler or touchEndHandler, whichever comes first
+    // -- once we know for sure no second finger is coming, so a real single-finger tap
+    // or drag is barely delayed at all in practice.
+    this._pendingPlacementX = this.mouseX;
+    this._pendingPlacementY = this.mouseY;
+    var self = this;
+    this._pendingPlacementTimer = setTimeout(function() {
+      self._pendingPlacementTimer = null;
+      commitPendingPlacement.call(self);
+    }, PENDING_PLACEMENT_DELAY);
   }
+};
+
+
+// Fires the deferred touch-down placement scheduled in touchStartHandler above.
+var commitPendingPlacement = function() {
+  this._dragging = true;
+  this._emitEvent(Messages.TOOL_CLICKED, {x: this._pendingPlacementX, y: this._pendingPlacementY});
+  var tileWidth = this._gameCanvas.getScaledTileWidth();
+  this._lastDragX = Math.floor(this._pendingPlacementX / tileWidth);
+  this._lastDragY = Math.floor(this._pendingPlacementY / tileWidth);
 };
 
 
@@ -378,12 +444,33 @@ var touchMoveHandler = function(e) {
   e.preventDefault();
 
   if (e.touches.length >= 2) {
-    // Two (or more) fingers down: always pan, regardless of tool/dragging state
-    this._panAccumX += touch.clientX - this._panLastX;
-    this._panAccumY += touch.clientY - this._panLastY;
-    this._panLastX = touch.clientX;
-    this._panLastY = touch.clientY;
+    // Two (or more) fingers down: always pan (tracked via the midpoint of the first two
+    // touches, not a single finger -- see the constructor comment), regardless of
+    // tool/dragging state, plus pinch-to-zoom from how the distance between them changes.
+    var midpoint = getTouchMidpoint(e.touches);
+    this._panAccumX += midpoint.x - this._panLastX;
+    this._panAccumY += midpoint.y - this._panLastY;
+    this._panLastX = midpoint.x;
+    this._panLastY = midpoint.y;
     applyPanAccumulator.call(this);
+
+    if (this._pinchStartDist) {
+      var dist = getTouchDistance(e.touches[0], e.touches[1]);
+      var ratio = dist / this._pinchStartDist;
+
+      // Steps through the existing discrete ZOOM_LEVELS exactly like the mouse wheel
+      // does, rather than introducing a separate continuous-scale zoom -- crossing the
+      // threshold re-anchors the reference distance, so a big continuous pinch steps
+      // through several levels instead of only ever firing once.
+      if (ratio >= PINCH_ZOOM_STEP_RATIO) {
+        this._gameCanvas.zoomIn();
+        this._pinchStartDist = dist;
+      } else if (ratio <= 1 / PINCH_ZOOM_STEP_RATIO) {
+        this._gameCanvas.zoomOut();
+        this._pinchStartDist = dist;
+      }
+    }
+
     return;
   }
 
@@ -396,6 +483,15 @@ var touchMoveHandler = function(e) {
     var totalDy = touch.clientY - this._touchStartY;
     if (Math.sqrt(totalDx * totalDx + totalDy * totalDy) > TAP_MOVE_THRESHOLD)
       this._touchMoved = true;
+  }
+
+  // Still only one finger down and it's already moving -- this was never going to be a
+  // two-finger pan, so commit the deferred touch-down placement now rather than waiting
+  // out the rest of PENDING_PLACEMENT_DELAY for no reason.
+  if (this._pendingPlacementTimer !== null) {
+    clearTimeout(this._pendingPlacementTimer);
+    this._pendingPlacementTimer = null;
+    commitPendingPlacement.call(this);
   }
 
   if (this._dragging) {
@@ -432,7 +528,20 @@ var touchEndHandler = function(e) {
     var remaining = e.touches[0];
     this._panLastX = remaining.clientX;
     this._panLastY = remaining.clientY;
+    this._pinchStartDist = null;
     return;
+  }
+
+  // The finger lifted before either PENDING_PLACEMENT_DELAY or a touchmove committed
+  // this -- it was always just a single tap-and-release with no second finger involved,
+  // so place it now instead of waiting out the rest of the timer. touchcancel (OS-
+  // interrupted touch) is the one case that should place nothing, matching the tap
+  // handling below.
+  if (this._pendingPlacementTimer !== null) {
+    clearTimeout(this._pendingPlacementTimer);
+    this._pendingPlacementTimer = null;
+    if (e.type !== 'touchcancel')
+      commitPendingPlacement.call(this);
   }
 
   if (this._dragging) {
@@ -546,6 +655,16 @@ var infoDrawerToggleHandler = function(e) {
 var toolsDrawerToggleHandler = function(e) {
   e.preventDefault();
   $('body').toggleClass('showToolsDrawer').removeClass('showInfoDrawer');
+};
+
+
+// Always-visible fail-safe for touch, which has no Escape key: mirrors what Escape
+// already does for tool selection on desktop (see Game.prototype.animate's handling
+// of this.inputStatus.escape), for the case where a touch gesture (e.g. panning with
+// a draggable tool still selected) placed something unwanted.
+var cancelToolHandler = function(e) {
+  e.preventDefault();
+  this.clearTool();
 };
 
 

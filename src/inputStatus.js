@@ -19,6 +19,11 @@ import { GameTools } from './gameTools.js';
 import * as Messages from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
 
+// How far (in CSS pixels) a touch may move before it stops counting as a tap and starts
+// counting as a drag/pan
+var TAP_MOVE_THRESHOLD = 10;
+
+
 var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.gameTools = new GameTools(map);
 
@@ -45,11 +50,16 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this._lastdragX = -1;
   this._lastdragY = -1;
 
-  // Touch panning (one-finger drag scrolls the camera)
+  // Touch panning (one-finger drag scrolls the camera when no draggable tool is active)
   this._panLastX = null;
   this._panLastY = null;
   this._panAccumX = 0;
   this._panAccumY = 0;
+
+  // Touch tap-vs-drag detection
+  this._touchStartX = null;
+  this._touchStartY = null;
+  this._touchMoved = false;
 
   // Tool buttons
   this.toolName = null;
@@ -263,19 +273,40 @@ var canvasClickHandler = function(e) {
 };
 
 
-// One-finger drag pans the camera. Tile-quantized, like the keyboard panning
-// (moveWest/moveNorth/etc. always move by exactly one tile) -- the engine assumes an
-// integer tile origin throughout, so sub-tile drag distance is accumulated here and only
-// actually pans once it adds up to a full (zoom-scaled) tile's width.
+// Touch input has to do three different jobs a mouse splits across three separate DOM
+// events (mousedown+drag, click, and nothing -- panning has no mouse equivalent at all):
+//   - a draggable tool selected (road/rail/wire): touch-down starts painting immediately,
+//     same as mousedown, and dragging paints a line, same as mousemove while dragging
+//   - a non-draggable tool selected (zones, buildings, bulldozer, query): a short tap
+//     places it once, same as a plain click -- but the placement only happens on
+//     touchend, once we know the finger *didn't* turn out to be panning
+//   - no draggable tool in progress: the drag pans the camera instead (see the
+//     accumulator logic below, tile-quantized exactly like the keyboard controls, since
+//     the engine assumes an integer tile origin throughout)
 var touchStartHandler = function(e) {
   var touch = e.touches[0];
   if (!touch)
     return;
 
+  var coords = this.getRelativeCoordinates(touch);
+  this.mouseX = coords.x;
+  this.mouseY = coords.y;
+
+  this._touchStartX = touch.clientX;
+  this._touchStartY = touch.clientY;
+  this._touchMoved = false;
+
   this._panLastX = touch.clientX;
   this._panLastY = touch.clientY;
   this._panAccumX = 0;
   this._panAccumY = 0;
+
+  if (this.currentTool !== null && this.currentTool.isDraggable) {
+    this._dragging = true;
+    this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
+    this._lastDragX = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
+    this._lastDragY = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
+  }
 };
 
 
@@ -286,6 +317,33 @@ var touchMoveHandler = function(e) {
 
   e.preventDefault();
 
+  var coords = this.getRelativeCoordinates(touch);
+  this.mouseX = coords.x;
+  this.mouseY = coords.y;
+
+  if (!this._touchMoved) {
+    var totalDx = touch.clientX - this._touchStartX;
+    var totalDy = touch.clientY - this._touchStartY;
+    if (Math.sqrt(totalDx * totalDx + totalDy * totalDy) > TAP_MOVE_THRESHOLD)
+      this._touchMoved = true;
+  }
+
+  if (this._dragging) {
+    // Painting a draggable tool along the path, exactly like mouseMoveHandler
+    var tileWidth = this._gameCanvas.getScaledTileWidth();
+    var x = Math.floor(this.mouseX / tileWidth);
+    var y = Math.floor(this.mouseY / tileWidth);
+
+    if (x !== this._lastDragX || y !== this._lastDragY) {
+      this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
+      this._lastDragX = x;
+      this._lastDragY = y;
+    }
+
+    return;
+  }
+
+  // Not painting: pan the camera instead
   var dx = touch.clientX - this._panLastX;
   var dy = touch.clientY - this._panLastY;
   this._panLastX = touch.clientX;
@@ -294,32 +352,47 @@ var touchMoveHandler = function(e) {
   this._panAccumX += dx;
   this._panAccumY += dy;
 
-  var tileWidth = this._gameCanvas.getScaledTileWidth();
+  var scaledTileWidth = this._gameCanvas.getScaledTileWidth();
 
   // Dragging right/down reveals what's to the left/above, i.e. the origin moves the
   // opposite way to the finger -- the classic "grab and drag the world" feel
-  while (this._panAccumX >= tileWidth) {
+  while (this._panAccumX >= scaledTileWidth) {
     this._gameCanvas.moveWest();
-    this._panAccumX -= tileWidth;
+    this._panAccumX -= scaledTileWidth;
   }
-  while (this._panAccumX <= -tileWidth) {
+  while (this._panAccumX <= -scaledTileWidth) {
     this._gameCanvas.moveEast();
-    this._panAccumX += tileWidth;
+    this._panAccumX += scaledTileWidth;
   }
-  while (this._panAccumY >= tileWidth) {
+  while (this._panAccumY >= scaledTileWidth) {
     this._gameCanvas.moveNorth();
-    this._panAccumY -= tileWidth;
+    this._panAccumY -= scaledTileWidth;
   }
-  while (this._panAccumY <= -tileWidth) {
+  while (this._panAccumY <= -scaledTileWidth) {
     this._gameCanvas.moveSouth();
-    this._panAccumY += tileWidth;
+    this._panAccumY += scaledTileWidth;
   }
 };
 
 
 var touchEndHandler = function(e) {
+  if (this._dragging) {
+    // End of a drag-paint gesture
+    this._dragging = false;
+    this._lastDragX = -1;
+    this._lastDragY = -1;
+  } else if (this.currentTool !== null && !this._touchMoved && e.type !== 'touchcancel') {
+    // A genuine tap that didn't turn into a pan: place the tool once. touchcancel means
+    // the OS interrupted the touch (an incoming call etc.), not a deliberate tap
+    this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
+  }
+
   this._panLastX = null;
   this._panLastY = null;
+  this._touchStartX = null;
+  this._touchStartY = null;
+  this.mouseX = -1;
+  this.mouseY = -1;
 };
 
 

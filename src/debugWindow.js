@@ -21,6 +21,13 @@ var DebugWindow = ModalWindow(function() {
   $(debugCancelID).on('click', cancel.bind(this));
   $(debugFormID).on('submit', submit.bind(this));
 
+  $(cheatAddFundsButtonID).on('click', function(e) {
+    e.preventDefault();
+    var amount = parseInt($(cheatFundsAmountID).val(), 10);
+    if (amount > 0)
+      this.close([{action: DebugWindow.ADD_FUNDS, data: amount}]);
+  }.bind(this));
+
   $('.cheatDisasterButton').on('click', function(e) {
     e.preventDefault();
     var disaster = $(e.currentTarget).data('disaster');
@@ -33,6 +40,7 @@ var debugCancelID = '#debugCancel';
 var debugFormID = '#debugForm';
 var debugOKID = '#debugOK';
 var cheatFundsAmountID = '#cheatFundsAmount';
+var cheatAddFundsButtonID = '#cheatAddFundsButton';
 var cheatFreeBuildYesID = '#cheatFreeBuildYes';
 var cheatFreeBuildNoID = '#cheatFreeBuildNo';
 
@@ -53,16 +61,11 @@ var cancel = function(e) {
 var submit = function(e) {
   e.preventDefault();
 
-  var actions = [];
-
-  var amount = parseInt($(cheatFundsAmountID).val(), 10);
-  if (amount > 0)
-    actions.push({action: DebugWindow.ADD_FUNDS, data: amount});
-
+  // Adding funds is now its own explicit button (see above) -- OK only ever
+  // applies the Free Build setting, so closing the menu never silently
+  // grants cash the player didn't ask for.
   var shouldFreeBuild = $('.cheatFreeBuildSetting:checked').val() === 'true';
-  actions.push({action: DebugWindow.FREE_BUILD_CHANGED, data: shouldFreeBuild});
-
-  this.close(actions);
+  this.close([{action: DebugWindow.FREE_BUILD_CHANGED, data: shouldFreeBuild}]);
 };
 
 

@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Windows desktop build:** [desktop/b0r3d-city.exe](desktop/b0r3d-city.exe) — a portable Electron wrapper around the same build, no install required. It's unsigned, so Windows SmartScreen may warn on first run.
+**Windows desktop build:** [still-b0r3d/b0r3d-City-Desktop](https://github.com/still-b0r3d/b0r3d-City-Desktop) — a portable Electron wrapper around this game's build output, kept in its own repo rather than here so this repo doesn't carry the wrapper's ~100MB binary.
 
 Renamed from "sim-b0r3d-city" (itself renamed from "micropolisJS") to put real distance between this project and a certain very-trademarked city-building game whose name we're not going to type here either — the kind of naming collision the bundled [LICENSE](LICENSE)'s additional terms exist specifically to warn against. Fittingly, that makes this a fork of a fork of a game that's never once, in almost twenty years, been allowed to go by its own retail name: its original publisher released it open-source under an alias for the exact same reason back in 2008, and here we are doing the identical dance. Some things just aren't allowed to have nice names.
 

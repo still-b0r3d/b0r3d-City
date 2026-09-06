@@ -14,6 +14,7 @@
 import $ from "jquery";
 
 import { SAVE_WINDOW_CLOSED } from './messages.ts';
+import { MiscUtils } from './miscUtils.js';
 import { ModalWindow } from './modalWindow.js';
 import { Storage } from './storage.js';
 import { Text } from './text.js';
@@ -32,28 +33,8 @@ var saveExistingID = '#saveExisting';
 var saveRowsID = '#saveRows';
 
 
-var escapeHtml = function(s) {
-  return String(s).replace(/[&<>"']/g, function(ch) {
-    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
-  });
-};
-
-
-var describeSave = function(entry) {
-  var meta = entry.meta || {};
-  var bits = [];
-
-  if (meta.date)
-    bits.push(Text.months[meta.date.month] + ' ' + meta.date.year);
-
-  if (meta.population !== undefined)
-    bits.push(meta.population + ' pop.');
-
-  if (meta.cityClass !== undefined && Text.cityClass[meta.cityClass])
-    bits.push(Text.cityClass[meta.cityClass]);
-
-  return bits.join(', ');
-};
+var escapeHtml = MiscUtils.escapeHtml;
+var describeSave = function(entry) { return MiscUtils.describeSave(entry, Text); };
 
 
 var renderSaves = function(saves) {
@@ -94,15 +75,19 @@ var submit = function(e) {
   if (!name)
     return;
 
-  var exists = Storage.saveExists(name);
+  var existing = Storage.findSave(name);
 
-  if (!exists && Storage.listSaves().length >= Storage.MAX_SAVES) {
+  if (!existing && Storage.listSaves().length >= Storage.MAX_SAVES) {
     $(saveStatusID).text('You already have ' + Storage.MAX_SAVES +
       ' saves, the most this game keeps. Delete one below, or save over an existing name, first.');
     return;
   }
 
-  if (exists && !window.confirm('A save named "' + name + '" already exists. Overwrite it?'))
+  // Names collide after slugifying (case/punctuation-insensitive), so the
+  // save this is about to overwrite may not be spelled the way it was just
+  // typed -- name the actual existing entry, not the newly-typed name.
+  if (existing && !window.confirm('This will overwrite the existing save "' + existing.name +
+      '" and rename it to "' + name + '". Continue?'))
     return;
 
   this.close(name);

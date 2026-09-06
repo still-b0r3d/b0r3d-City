@@ -37,11 +37,44 @@ var reflectEvent = function(message, value) {
 };
 
 
+var escapeHtml = function(s) {
+  return String(s).replace(/[&<>"']/g, function(ch) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
+  });
+};
+
+
+// Formats a save's date/population/city-class metadata into a display
+// string, e.g. "Mar 1900, 1234 pop., Town". Shared by the save list
+// (saveWindow.js) and the load-game list (splashScreen.js) -- same save
+// index entries, same summary format in both places. Takes the Text module
+// as a parameter rather than importing it directly -- text.js pulls in
+// simulation.js, which itself imports MiscUtils, so importing Text here
+// would create a circular dependency.
+var describeSave = function(entry, Text) {
+  var meta = entry.meta || {};
+  var bits = [];
+
+  if (meta.date)
+    bits.push(Text.months[meta.date.month] + ' ' + meta.date.year);
+
+  if (meta.population !== undefined)
+    bits.push(meta.population + ' pop.');
+
+  if (meta.cityClass !== undefined && Text.cityClass[meta.cityClass])
+    bits.push(Text.cityClass[meta.cityClass]);
+
+  return bits.join(', ');
+};
+
+
 var MiscUtils = {
   clamp: clamp,
   makeConstantDescriptor: makeConstantDescriptor,
   normaliseDOMid: normaliseDOMid,
-  reflectEvent: reflectEvent
+  reflectEvent: reflectEvent,
+  escapeHtml: escapeHtml,
+  describeSave: describeSave
 };
 
 

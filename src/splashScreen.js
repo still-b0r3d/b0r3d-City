@@ -16,6 +16,7 @@ import $ from "jquery";
 import { Config } from './config.js';
 import { Game } from './game.js';
 import { MapGenerator } from './mapGenerator.js';
+import { MiscUtils } from './miscUtils.js';
 import { Simulation } from './simulation.js';
 import { SplashCanvas } from './splashCanvas.js';
 import { Storage } from './storage.js';
@@ -101,28 +102,8 @@ var exposeCheatAPI = function(g) {
 };
 
 
-var escapeHtml = function(s) {
-  return String(s).replace(/[&<>"']/g, function(ch) {
-    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
-  });
-};
-
-
-var describeSave = function(entry) {
-  var meta = entry.meta || {};
-  var bits = [];
-
-  if (meta.date)
-    bits.push(Text.months[meta.date.month] + ' ' + meta.date.year);
-
-  if (meta.population !== undefined)
-    bits.push(meta.population + ' pop.');
-
-  if (meta.cityClass !== undefined && Text.cityClass[meta.cityClass])
-    bits.push(Text.cityClass[meta.cityClass]);
-
-  return bits.join(', ');
-};
+var escapeHtml = MiscUtils.escapeHtml;
+var describeSave = function(entry) { return MiscUtils.describeSave(entry, Text); };
 
 
 // self is the SplashScreen instance (its tileSet/snowTileSet/spriteSheet are

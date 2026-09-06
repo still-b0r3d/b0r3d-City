@@ -10,6 +10,7 @@
 import $ from "jquery";
 
 import { HIGH_SCORE_WINDOW_CLOSED } from './messages.ts';
+import { MiscUtils } from './miscUtils.js';
 import { ModalWindow } from './modalWindow.js';
 import { SiteEnv } from './siteEnv.js';
 
@@ -57,11 +58,7 @@ var highScoreCurrentClassID = '#highScoreCurrentClass';
 var highScoreCurrentPopulationID = '#highScoreCurrentPopulation';
 
 
-var escapeHtml = function(s) {
-  return String(s).replace(/[&<>"']/g, function(ch) {
-    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[ch];
-  });
-};
+var escapeHtml = MiscUtils.escapeHtml;
 
 
 var formatNumber = function(n) {
@@ -122,7 +119,8 @@ var submit = function(e) {
     url: API_BASE + GAME_KEY + '/submit',
     method: 'POST',
     contentType: 'application/json',
-    data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel, population: self._currentPopulation})
+    data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel,
+      population: self._currentPopulation, cheatsUsed: self._cheatsUsed})
   }).done(function(data) {
     renderScores(data.scores);
     $(highScoreStatusID).text(data.insertedId !== null && data.insertedId !== undefined ?

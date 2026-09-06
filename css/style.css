@@ -66,6 +66,12 @@ main {
   overflow: hidden;
 }
 
+#MicropolisCanvas {
+  /* One-finger drag pans the map (see inputStatus.js) -- without this the browser's own
+     touch scroll/zoom gestures fight with it */
+  touch-action: none;
+}
+
 nav a, nav a:link, nav a:visited, nav a:hover, footer a, footer a:link, footer a:visited, footer a:hover,
 #aboutHeader a, #aboutHeader a:link, #aboutHeader a:visited, #aboutHeader a:hover,
 #licenseHeader a, #licenseHeader a:link, #licenseHeader a:visited, #licenseHeader a:hover {

@@ -45,6 +45,12 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this._lastdragX = -1;
   this._lastdragY = -1;
 
+  // Touch panning (one-finger drag scrolls the camera)
+  this._panLastX = null;
+  this._panLastY = null;
+  this._panAccumX = 0;
+  this._panAccumY = 0;
+
   // Tool buttons
   this.toolName = null;
   this.currentTool = null;
@@ -59,6 +65,15 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   $(this.canvasID).on('mouseenter', mouseEnterHandler.bind(this));
   $(this.canvasID).on('mouseleave', mouseLeaveHandler.bind(this));
   $(this.canvasID).on('wheel', wheelHandler.bind(this));
+
+  // Bound with the native API (not jQuery) and {passive: false}, since browsers default
+  // touch listeners to passive -- without that, preventDefault() here is silently ignored
+  // and the whole page scrolls/bounces underneath a pan gesture instead of just the map
+  var canvasEl = document.querySelector(this.canvasID);
+  canvasEl.addEventListener('touchstart', touchStartHandler.bind(this), {passive: false});
+  canvasEl.addEventListener('touchmove', touchMoveHandler.bind(this), {passive: false});
+  canvasEl.addEventListener('touchend', touchEndHandler.bind(this), {passive: false});
+  canvasEl.addEventListener('touchcancel', touchEndHandler.bind(this), {passive: false});
 
   this.mouseDownHandler = mouseDownHandler.bind(this);
   this.mouseMoveHandler = mouseMoveHandler.bind(this);
@@ -245,6 +260,66 @@ var canvasClickHandler = function(e) {
 
   this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
   e.preventDefault();
+};
+
+
+// One-finger drag pans the camera. Tile-quantized, like the keyboard panning
+// (moveWest/moveNorth/etc. always move by exactly one tile) -- the engine assumes an
+// integer tile origin throughout, so sub-tile drag distance is accumulated here and only
+// actually pans once it adds up to a full (zoom-scaled) tile's width.
+var touchStartHandler = function(e) {
+  var touch = e.touches[0];
+  if (!touch)
+    return;
+
+  this._panLastX = touch.clientX;
+  this._panLastY = touch.clientY;
+  this._panAccumX = 0;
+  this._panAccumY = 0;
+};
+
+
+var touchMoveHandler = function(e) {
+  var touch = e.touches[0];
+  if (!touch || this._panLastX === null)
+    return;
+
+  e.preventDefault();
+
+  var dx = touch.clientX - this._panLastX;
+  var dy = touch.clientY - this._panLastY;
+  this._panLastX = touch.clientX;
+  this._panLastY = touch.clientY;
+
+  this._panAccumX += dx;
+  this._panAccumY += dy;
+
+  var tileWidth = this._gameCanvas.getScaledTileWidth();
+
+  // Dragging right/down reveals what's to the left/above, i.e. the origin moves the
+  // opposite way to the finger -- the classic "grab and drag the world" feel
+  while (this._panAccumX >= tileWidth) {
+    this._gameCanvas.moveWest();
+    this._panAccumX -= tileWidth;
+  }
+  while (this._panAccumX <= -tileWidth) {
+    this._gameCanvas.moveEast();
+    this._panAccumX += tileWidth;
+  }
+  while (this._panAccumY >= tileWidth) {
+    this._gameCanvas.moveNorth();
+    this._panAccumY -= tileWidth;
+  }
+  while (this._panAccumY <= -tileWidth) {
+    this._gameCanvas.moveSouth();
+    this._panAccumY += tileWidth;
+  }
+};
+
+
+var touchEndHandler = function(e) {
+  this._panLastX = null;
+  this._panLastY = null;
 };
 
 

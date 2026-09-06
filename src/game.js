@@ -62,6 +62,12 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   this.name = name || 'MyTown';
   this.everClicked = false;
+  // One-way flag: never reset to false once a cheat actually does something (as opposed
+  // to just opening the cheat menu, which alone doesn't affect gameplay). Persisted in
+  // saves so a save/load cycle can't launder a cheated city back onto the leaderboard.
+  // Initialized here, before the possible load() below, for the same reason
+  // everClicked is -- load() needs to be able to override this default.
+  this._cheatsUsed = false;
 
   if (savedGame)
     this.load(savedGame);
@@ -236,7 +242,7 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
 
 Game.prototype.save = function(saveName) {
-  var saveData = {name: this.name, everClicked: this.everClicked};
+  var saveData = {name: this.name, everClicked: this.everClicked, cheatsUsed: this._cheatsUsed};
   BaseTool.save(saveData);
   this.simulation.save(saveData);
 
@@ -253,6 +259,8 @@ Game.prototype.save = function(saveName) {
 Game.prototype.load = function(saveData) {
   this.name = saveData.name;
   this.everClicked = saveData.everClicked;
+  // Older saves predate this field -- default to false rather than undefined
+  this._cheatsUsed = saveData.cheatsUsed || false;
   BaseTool.load(saveData);
   this.simulation.load(saveData);
 };
@@ -363,16 +371,22 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
 
 
 Game.prototype.cheatAddFunds = function(amount) {
+  this._cheatsUsed = true;
   this.simulation.budget.spend(-amount);
 };
 
 
 Game.prototype.cheatSetFreeBuild = function(enabled) {
+  // Only turning it on counts as "using" it -- switching it back off isn't itself a cheat
+  if (enabled)
+    this._cheatsUsed = true;
   BaseTool.setFreeBuild(enabled);
 };
 
 
 Game.prototype.cheatTriggerDisaster = function(name) {
+  this._cheatsUsed = true;
+
   switch (name) {
     case 'fire':
       this.simulation.disasterManager.makeFire();
@@ -409,6 +423,7 @@ Game.prototype.cheatGetState = function() {
     funds: this.simulation.budget.totalFunds,
     cheatMenuEnabled: this.cheatMenuEnabled,
     freeBuild: BaseTool.getFreeBuild(),
+    cheatsUsed: this._cheatsUsed,
     date: this.simulation.getDate ? this.simulation.getDate() : null
   };
 };
@@ -573,7 +588,8 @@ Game.prototype.handleHighScoreRequest = function() {
   this.highScoreWindow.open({
     score: this.simulation.evaluation.cityScore,
     level: HighScoreWindow.classNameToLevel(this.simulation.evaluation.cityClass),
-    population: this.simulation.evaluation.cityPop
+    population: this.simulation.evaluation.cityPop,
+    cheatsUsed: this._cheatsUsed
   });
 };
 

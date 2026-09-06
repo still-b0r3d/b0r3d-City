@@ -104,6 +104,11 @@ var cancel = function(e) {
 var submit = function(e) {
   e.preventDefault();
 
+  // Belt and braces -- the form's hidden whenever this is true (see open()), but don't
+  // rely on that alone to keep a cheated score off the board
+  if (this._cheatsUsed)
+    return;
+
   var name = $(highScoreNameID).val();
   if (!name) {
     $(highScoreStatusID).text('Enter a name first.');
@@ -139,12 +144,20 @@ HighScoreWindow.prototype.open = function(data) {
   this._currentScore = data.score || 0;
   this._currentLevel = data.level || 1;
   this._currentPopulation = data.population || 0;
+  this._cheatsUsed = !!data.cheatsUsed;
 
   $(highScoreCurrentScoreID).text(this._currentScore);
   $(highScoreCurrentClassID).text(HighScoreWindow.levelToClassName(this._currentLevel));
   $(highScoreCurrentPopulationID).text(formatNumber(this._currentPopulation));
   $(highScoreNameID).val('');
-  $(highScoreStatusID).text('');
+
+  if (this._cheatsUsed) {
+    $(highScoreFormID).hide();
+    $(highScoreStatusID).text('Score submission is disabled for this city — cheats were used.');
+  } else {
+    $(highScoreFormID).show();
+    $(highScoreStatusID).text('');
+  }
 
   refreshScores();
 

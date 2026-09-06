@@ -61,7 +61,7 @@ header h1 {
 main {
   position: absolute;
   top: 0;
-  bottom: 35px;
+  bottom: 26px;
   width: 100%;
   overflow: hidden;
 }
@@ -637,11 +637,7 @@ nav li {
   }
 
   main {
-    bottom: 35px;
-  }
-
-  footer {
-    height: 4em;
+    bottom: 26px;
   }
 
   .border-bottom {
@@ -928,9 +924,18 @@ nav li {
 }
 
 #footer {
-  height: 2.2em;
+  height: 26px;
+  box-sizing: border-box;
 }
 
 #footer #build {
   font-size: 11px;
+}
+
+#b0r3dHomeLink {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  font-size: 11px;
+  margin-left: 0;
 }

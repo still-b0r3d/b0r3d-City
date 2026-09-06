@@ -19,14 +19,15 @@ import { GameTools } from './gameTools.js';
 import * as Messages from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
 
-var InputStatus = EventEmitter(function(map, tileWidth) {
+var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.gameTools = new GameTools(map);
 
   this.gameTools.addEventListener(Messages.QUERY_WINDOW_NEEDED, MiscUtils.reflectEvent.bind(this, Messages.QUERY_WINDOW_NEEDED));
 
   this.canvasID = MiscUtils.normaliseDOMid(canvasID);
 
-  this._tileWidth = tileWidth;
+  // Kept live rather than snapshotting tileWidth once, since it changes with zoom
+  this._gameCanvas = gameCanvas;
 
   // Keyboard Movement
   this.up = false;
@@ -57,6 +58,7 @@ var InputStatus = EventEmitter(function(map, tileWidth) {
   this.getRelativeCoordinates = getRelativeCoordinates.bind(this);
   $(this.canvasID).on('mouseenter', mouseEnterHandler.bind(this));
   $(this.canvasID).on('mouseleave', mouseLeaveHandler.bind(this));
+  $(this.canvasID).on('wheel', wheelHandler.bind(this));
 
   this.mouseDownHandler = mouseDownHandler.bind(this);
   this.mouseMoveHandler = mouseMoveHandler.bind(this);
@@ -73,6 +75,8 @@ var InputStatus = EventEmitter(function(map, tileWidth) {
   $('#saveRequest').click(saveHandler.bind(this));
   $('#highScoreRequest').click(highScoreHandler.bind(this));
   $('#debugRequest').click(debugHandler.bind(this));
+  $('#zoomInRequest').click(zoomInHandler.bind(this));
+  $('#zoomOutRequest').click(zoomOutHandler.bind(this));
 });
 
 
@@ -176,8 +180,8 @@ var mouseDownHandler = function(e) {
   this._dragging = true;
   this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
 
-  this._lastDragX = Math.floor(this.mouseX / this._tileWidth);
-  this._lastDragY = Math.floor(this.mouseY / this._tileWidth);
+  this._lastDragX = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
+  this._lastDragY = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
 
   $(this.canvasID).on('mouseup', this.mouseUpHandler);
   e.preventDefault();
@@ -220,8 +224,8 @@ var mouseMoveHandler = function(e) {
   if (this._dragging) {
     // XXX Work up how to patch up the path for fast mouse moves. My first attempt was too slow, and ended up missing
     // mouseUp events
-    var x = Math.floor(this.mouseX / this._tileWidth);
-    var y = Math.floor(this.mouseY / this._tileWidth);
+    var x = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
+    var y = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
 
     var lastX = this._lastDragX;
     var lastY = this._lastDragY;
@@ -291,6 +295,28 @@ InputStatus.prototype.clearTool = function() {
   this.toolWidth = 0;
   this.toolColour = '';
   $('.selected').removeClass('selected');
+};
+
+
+var wheelHandler = function(e) {
+  e.preventDefault();
+
+  if (e.originalEvent.deltaY < 0)
+    this._gameCanvas.zoomIn();
+  else if (e.originalEvent.deltaY > 0)
+    this._gameCanvas.zoomOut();
+};
+
+
+var zoomInHandler = function(e) {
+  e.preventDefault();
+  this._gameCanvas.zoomIn();
+};
+
+
+var zoomOutHandler = function(e) {
+  e.preventDefault();
+  this._gameCanvas.zoomOut();
 };
 
 

@@ -21,6 +21,12 @@ import { Position } from './position.ts';
 import { TileSet } from './tileSet.js';
 import { TILE_INVALID } from "./tileValues.ts";
 
+// Available zoom levels (multiples of the tileset's native tile size), and the
+// index within it that we start at (1x, i.e. native size)
+var ZOOM_LEVELS = [0.5, 0.75, 1, 1.5, 2, 3];
+var DEFAULT_ZOOM_INDEX = 2;
+
+
 function GameCanvas(id, parentNode) {
   if (!(this instanceof GameCanvas))
     return new GameCanvas(id, parentNode, width, height);
@@ -82,6 +88,8 @@ GameCanvas.prototype.init = function(map, tileSet, spriteSheet, animationManager
   this._tileSet = tileSet;
   var w = this._tileSet.tileWidth;
   this._map = map;
+  this._zoomIndex = DEFAULT_ZOOM_INDEX;
+  this._scale = ZOOM_LEVELS[this._zoomIndex];
   this.animationManager = new AnimationManager(map);
 
   if (this._canvas.width < w || this._canvas.height < w)
@@ -138,7 +146,7 @@ GameCanvas.prototype._calculateDimensions = function(force) {
   this._canvas.width = canvasWidth;
   this._canvas.height = canvasHeight;
 
-  var w = this._tileSet.tileWidth;
+  var w = this._scaledTileWidth = Math.round(this._tileSet.tileWidth * this._scale);
 
   // How many tiles fit?
   this._wholeTilesInViewX = Math.floor(canvasWidth / w);
@@ -256,6 +264,50 @@ GameCanvas.prototype.centreOn = function(x, y) {
 };
 
 
+GameCanvas.prototype.getScale = function() {
+  return this._scale;
+};
+
+
+GameCanvas.prototype.getScaledTileWidth = function() {
+  return this._scaledTileWidth;
+};
+
+
+GameCanvas.prototype._setZoomIndex = function(index) {
+  if (!this.ready)
+    throw new Error('Not ready!');
+
+  index = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, index));
+  if (index === this._zoomIndex)
+    return;
+
+  // Keep the current viewport centre anchored on the same map point across the scale change
+  var centreX = this._originX + this._wholeTilesInViewX / 2;
+  var centreY = this._originY + this._wholeTilesInViewY / 2;
+
+  this._zoomIndex = index;
+  this._scale = ZOOM_LEVELS[index];
+
+  // Every tile's on-screen position/size just changed, but tile *values* haven't -- the
+  // diff-based repaint in _paintTiles would otherwise think nothing needs redrawing
+  this._lastPaintedTiles = null;
+
+  this._calculateDimensions(true);
+  this.centreOn(centreX, centreY);
+};
+
+
+GameCanvas.prototype.zoomIn = function() {
+  this._setZoomIndex(this._zoomIndex + 1);
+};
+
+
+GameCanvas.prototype.zoomOut = function() {
+  this._setZoomIndex(this._zoomIndex - 1);
+};
+
+
 GameCanvas.prototype.getTileOrigin = function() {
   var e = new Error('Not ready!');
 
@@ -283,8 +335,8 @@ GameCanvas.prototype.canvasCoordinateToTileOffset = function(x, y) {
   if (!this.ready)
     throw new Error('Not ready!');
 
-  return {x: Math.floor(x / this._tileSet.tileWidth),
-          y: Math.floor(y / this._tileSet.tileWidth)};
+  return {x: Math.floor(x / this._scaledTileWidth),
+          y: Math.floor(y / this._scaledTileWidth)};
 };
 
 
@@ -298,8 +350,8 @@ GameCanvas.prototype.canvasCoordinateToTileCoordinate = function(x, y) {
   if (x >= this.canvasWidth || y >= this.canvasHeight)
     return null;
 
-  return {x: this._originX + Math.floor(x/this._tileSet.tileWidth),
-          y: this._originY + Math.floor(y/this._tileSet.tileWidth)};
+  return {x: this._originX + Math.floor(x/this._scaledTileWidth),
+          y: this._originY + Math.floor(y/this._scaledTileWidth)};
 };
 
 
@@ -313,8 +365,8 @@ GameCanvas.prototype.canvasCoordinateToPosition = function(x, y) {
   if (x >= this.canvasWidth || y >= this.canvasHeight)
     return null;
 
-  x = this._originX + Math.floor(x / this._tileSet.tileWidth);
-  y = this._originY + Math.floor(y / this._tileSet.tileWidth);
+  x = this._originX + Math.floor(x / this._scaledTileWidth);
+  y = this._originY + Math.floor(y / this._scaledTileWidth);
 
 
   if (x < 0 || x >= this._map.width || y < 0 || y >= this._map.height)
@@ -355,8 +407,8 @@ GameCanvas.prototype.tileToCanvasCoordinate = function(x, y) {
       y < this._originY || y >= this._originY + this._totalTilesInViewY)
     return null;
 
-  return {x: (x - this._originX) * this._tileSet.tileWidth,
-          y: (y - this._originY) * this._tileSet.tileWidth};
+  return {x: (x - this._originX) * this._scaledTileWidth,
+          y: (y - this._originY) * this._scaledTileWidth};
 };
 
 
@@ -382,9 +434,11 @@ GameCanvas.prototype._screenshot = function(onlyVisible) {
   tempCanvas.height = this._map.height * this._tileSet.tileWidth;
   var ctx = tempCanvas.getContext('2d');
 
+  // The full-map screenshot is always rendered at native resolution, independent of
+  // whatever zoom level the player is currently viewing the map at
   for (var x = 0; x < this._map.width; x++) {
     for (var y = 0; y < this._map.height; y++) {
-      this._paintOne(ctx, this._map.getTileValue(x, y), x, y);
+      this._paintOne(ctx, this._map.getTileValue(x, y), x, y, this._tileSet.tileWidth);
     }
   }
   return tempCanvas.toDataURL();
@@ -408,29 +462,39 @@ GameCanvas.prototype.shoogle = function() {
 
 GameCanvas.prototype._processSprites = function(ctx, spriteList) {
   var spriteDamage = [];
-  var tileWidth = this._tileSet.tileWidth;
+  var scale = this._scale;
+  var scaledTileWidth = this._scaledTileWidth;
 
   for (var i = 0, l = spriteList.length; i < l; i++) {
     var sprite = spriteList[i];
+
+    // Sprites move in world-pixel space (16 units per tile, regardless of the tileset's
+    // own native pixel size or the current zoom), so their screen position/size needs
+    // scaling just like tiles do
+    var destX = (sprite.x + sprite.xOffset - this._originX * 16) * scale;
+    var destY = (sprite.y + sprite.yOffset - this._originY * 16) * scale;
+    var destWidth = sprite.width * scale;
+    var destHeight = sprite.height * scale;
+
     try {
       ctx.drawImage(this._spriteSheet,
                     (sprite.frame - 1) * 48,
                     (sprite.type - 1) * 48,
                     sprite.width,
                     sprite.width,
-                    sprite.x + sprite.xOffset - this._originX * 16,
-                    sprite.y + sprite.yOffset - this._originY * 16,
-                    sprite.width,
-                    sprite.width);
+                    destX,
+                    destY,
+                    destWidth,
+                    destWidth);
     } catch (e) {
       throw new Error('Failed to draw sprite ' + sprite.type + ' frame ' + sprite.frame + ' at ' + sprite.x +  ', ' + sprite.y);
     }
 
     // sprite values are in pixels
-    spriteDamage.push({x: Math.floor((sprite.x + sprite.xOffset - this._originX * 16) / tileWidth),
-                       xBound: Math.ceil((sprite.x + sprite.xOffset + sprite.width - this._originX * 16) / tileWidth),
-                       y: Math.floor((sprite.y + sprite.yOffset - this._originY * 16) / tileWidth),
-                       yBound: Math.ceil((sprite.y + sprite.yOffset + sprite.height - this._originY * 16) / tileWidth)});
+    spriteDamage.push({x: Math.floor(destX / scaledTileWidth),
+                       xBound: Math.ceil((destX + destWidth) / scaledTileWidth),
+                       y: Math.floor(destY / scaledTileWidth),
+                       yBound: Math.ceil((destY + destHeight) / scaledTileWidth)});
   }
 
   return spriteDamage;
@@ -471,9 +535,9 @@ GameCanvas.prototype._processMouse = (function() {
       return damage;
     }
 
-    var pos = {x: mouseX * this._tileSet.tileWidth, y: mouseY * this._tileSet.tileWidth};
-    var width = mouseWidth * this._tileSet.tileWidth;
-    var height = mouseHeight * this._tileSet.tileWidth;
+    var pos = {x: mouseX * this._scaledTileWidth, y: mouseY * this._scaledTileWidth};
+    var width = mouseWidth * this._scaledTileWidth;
+    var height = mouseHeight * this._scaledTileWidth;
     MouseBox.draw(this._canvas, pos, width, height, options);
 
     // Return an object representing tiles that were damaged that will need redrawn
@@ -487,22 +551,24 @@ GameCanvas.prototype._processMouse = (function() {
 })();
 
 
-GameCanvas.prototype._paintVoid = function(ctx, x, y) {
-  var w = this._tileSet.tileWidth;
+GameCanvas.prototype._paintVoid = function(ctx, x, y, w) {
+  w = w || this._scaledTileWidth;
   ctx.fillStyle = 'black';
   ctx.fillRect(x * w, y * w, w, w);
 };
 
 
-GameCanvas.prototype._paintOne = function(ctx, tileVal, x, y) {
+GameCanvas.prototype._paintOne = function(ctx, tileVal, x, y, w) {
+  w = w || this._scaledTileWidth;
+
   if (tileVal === TILE_INVALID) {
-    this._paintVoid(ctx, x, y);
+    this._paintVoid(ctx, x, y, w);
     return;
   }
 
   var src = this._tileSet[tileVal];
   try {
-    ctx.drawImage(src, x * this._tileSet.tileWidth, y * this._tileSet.tileWidth);
+    ctx.drawImage(src, x * w, y * w, w, w);
   } catch (e) {
     var mapX = this._originX + x;
     var mapY = this._originY + y;

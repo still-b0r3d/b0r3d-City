@@ -71,7 +71,7 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // Note: must init canvas before inputStatus
   this.gameCanvas = new GameCanvas('canvasContainer');
   this.gameCanvas.init(this.gameMap, this.tileSet, spriteSheet);
-  this.inputStatus = new InputStatus(this.gameMap, tileSet.tileWidth);
+  this.inputStatus = new InputStatus(this.gameMap, this.gameCanvas);
 
   this.dialogOpen = false;
   this._openWindow = null;

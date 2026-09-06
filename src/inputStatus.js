@@ -285,10 +285,34 @@ var canvasClickHandler = function(e) {
 //   - no draggable tool in progress: the drag pans the camera instead (see the
 //     accumulator logic below, tile-quantized exactly like the keyboard controls, since
 //     the engine assumes an integer tile origin throughout)
+// A second finger touching down always pans instead, regardless of which of the above
+// applies -- otherwise a draggable tool has no way to pan at all, since one finger is
+// already spoken for by painting. See the e.touches.length >= 2 branches below.
 var touchStartHandler = function(e) {
   var touch = e.touches[0];
   if (!touch)
     return;
+
+  if (e.touches.length >= 2) {
+    // A second finger just came down: switch to a two-finger pan regardless of the
+    // selected tool, cancelling any in-progress single-finger paint so a multi-touch
+    // gesture never also places something. (If a draggable tool was already painting
+    // when the second finger landed, the one tile painted before this event fired is
+    // a rare, harmless cosmetic edge case -- not worth delaying every single-finger tap
+    // to avoid.)
+    if (this._dragging) {
+      this._dragging = false;
+      this._lastDragX = -1;
+      this._lastDragY = -1;
+    }
+
+    this._touchMoved = true; // mid-gesture now; never treat a later touchend as a fresh tap
+    this._panLastX = touch.clientX;
+    this._panLastY = touch.clientY;
+    this._panAccumX = 0;
+    this._panAccumY = 0;
+    return;
+  }
 
   var coords = this.getRelativeCoordinates(touch);
   this.mouseX = coords.x;
@@ -303,11 +327,45 @@ var touchStartHandler = function(e) {
   this._panAccumX = 0;
   this._panAccumY = 0;
 
-  if (this.currentTool !== null && this.currentTool.isDraggable) {
+  // Mirrors mouseDownHandler's modifier-key guard: a modifier held during the
+  // gesture means "don't place the tool" here too. Falling through leaves
+  // _dragging false, so touchMoveHandler treats the rest of the gesture as a
+  // pan instead of a no-op.
+  var modifierHeld = e.shiftKey || e.altKey || e.ctrlKey || e.metaKey;
+
+  if (this.currentTool !== null && this.currentTool.isDraggable && !modifierHeld) {
     this._dragging = true;
     this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
     this._lastDragX = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
     this._lastDragY = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
+  }
+};
+
+
+// Shared by the one-finger pan (no draggable tool in progress) and the always-pan
+// two-finger gesture below -- moves the camera by however many whole (zoom-scaled)
+// tiles the accumulated drag distance covers, carrying any leftover fractional tile
+// forward to the next call.
+var applyPanAccumulator = function() {
+  var scaledTileWidth = this._gameCanvas.getScaledTileWidth();
+
+  // Dragging right/down reveals what's to the left/above, i.e. the origin moves the
+  // opposite way to the finger -- the classic "grab and drag the world" feel
+  while (this._panAccumX >= scaledTileWidth) {
+    this._gameCanvas.moveWest();
+    this._panAccumX -= scaledTileWidth;
+  }
+  while (this._panAccumX <= -scaledTileWidth) {
+    this._gameCanvas.moveEast();
+    this._panAccumX += scaledTileWidth;
+  }
+  while (this._panAccumY >= scaledTileWidth) {
+    this._gameCanvas.moveNorth();
+    this._panAccumY -= scaledTileWidth;
+  }
+  while (this._panAccumY <= -scaledTileWidth) {
+    this._gameCanvas.moveSouth();
+    this._panAccumY += scaledTileWidth;
   }
 };
 
@@ -318,6 +376,16 @@ var touchMoveHandler = function(e) {
     return;
 
   e.preventDefault();
+
+  if (e.touches.length >= 2) {
+    // Two (or more) fingers down: always pan, regardless of tool/dragging state
+    this._panAccumX += touch.clientX - this._panLastX;
+    this._panAccumY += touch.clientY - this._panLastY;
+    this._panLastX = touch.clientX;
+    this._panLastY = touch.clientY;
+    applyPanAccumulator.call(this);
+    return;
+  }
 
   var coords = this.getRelativeCoordinates(touch);
   this.mouseX = coords.x;
@@ -346,46 +414,37 @@ var touchMoveHandler = function(e) {
   }
 
   // Not painting: pan the camera instead
-  var dx = touch.clientX - this._panLastX;
-  var dy = touch.clientY - this._panLastY;
+  this._panAccumX += touch.clientX - this._panLastX;
+  this._panAccumY += touch.clientY - this._panLastY;
   this._panLastX = touch.clientX;
   this._panLastY = touch.clientY;
 
-  this._panAccumX += dx;
-  this._panAccumY += dy;
-
-  var scaledTileWidth = this._gameCanvas.getScaledTileWidth();
-
-  // Dragging right/down reveals what's to the left/above, i.e. the origin moves the
-  // opposite way to the finger -- the classic "grab and drag the world" feel
-  while (this._panAccumX >= scaledTileWidth) {
-    this._gameCanvas.moveWest();
-    this._panAccumX -= scaledTileWidth;
-  }
-  while (this._panAccumX <= -scaledTileWidth) {
-    this._gameCanvas.moveEast();
-    this._panAccumX += scaledTileWidth;
-  }
-  while (this._panAccumY >= scaledTileWidth) {
-    this._gameCanvas.moveNorth();
-    this._panAccumY -= scaledTileWidth;
-  }
-  while (this._panAccumY <= -scaledTileWidth) {
-    this._gameCanvas.moveSouth();
-    this._panAccumY += scaledTileWidth;
-  }
+  applyPanAccumulator.call(this);
 };
 
 
 var touchEndHandler = function(e) {
+  if (e.touches.length > 0) {
+    // One finger lifted but at least one remains down -- this was a two-finger pan
+    // dropping to one, not the end of the gesture. Don't reset any state, just
+    // re-anchor to whichever touch is still down so the next touchmove doesn't see
+    // a sudden jump from the lifted finger's last position to the remaining one's.
+    var remaining = e.touches[0];
+    this._panLastX = remaining.clientX;
+    this._panLastY = remaining.clientY;
+    return;
+  }
+
   if (this._dragging) {
     // End of a drag-paint gesture
     this._dragging = false;
     this._lastDragX = -1;
     this._lastDragY = -1;
-  } else if (this.currentTool !== null && !this._touchMoved && e.type !== 'touchcancel') {
+  } else if (this.currentTool !== null && !this._touchMoved && e.type !== 'touchcancel' &&
+             !(e.shiftKey || e.altKey || e.ctrlKey || e.metaKey)) {
     // A genuine tap that didn't turn into a pan: place the tool once. touchcancel means
-    // the OS interrupted the touch (an incoming call etc.), not a deliberate tap
+    // the OS interrupted the touch (an incoming call etc.), not a deliberate tap.
+    // Modifier check mirrors canvasClickHandler's guard on the mouse-click path.
     this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
   }
 

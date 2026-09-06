@@ -15,6 +15,7 @@ import { BlockMap } from './blockMap.ts';
 import { BlockMapUtils } from './blockMapUtils.js';
 import { Budget } from './budget.js';
 import { Census } from './census.js';
+import { CivicBuildings } from './civicBuildings.js';
 import { Commercial } from './commercial.js';
 import { DisasterManager } from './disasterManager.js';
 import { EventEmitter } from './eventEmitter.js';
@@ -78,6 +79,14 @@ var Simulation = EventEmitter(function (gameMap, gameLevel, speed, savedGame) {
 
     // Holds a value containing a score representing the effect of fire cover in this neighborhood, range 0-1000
     fireStationEffectMap: new BlockMap(this._map.width, this._map.height, 8),
+
+    // A map used to note positions of civic buildings (Hospital, Library) during the map
+    // scan, range 0-1000 -- see civicBuildings.js
+    civicBuildingMap: new BlockMap(this._map.width, this._map.height, 8),
+
+    // Holds a value containing a score representing the land value bonus from nearby
+    // civic buildings in this neighborhood, range 0-1000
+    civicBuildingEffectMap: new BlockMap(this._map.width, this._map.height, 8),
 
     // Holds scores representing the land value in the range 0-250
     landValueMap: new BlockMap(this._map.width, this._map.height, 2),
@@ -223,6 +232,7 @@ Simulation.prototype._clearCensus = function() {
   this._powerManager.clearPowerStack();
   this.blockMaps.fireStationMap.clear();
   this.blockMaps.policeStationMap.clear();
+  this.blockMaps.civicBuildingMap.clear();
 };
 
 
@@ -279,6 +289,7 @@ Simulation.prototype.init = function() {
   this.spriteManager.addEventListener(Messages.HEAVY_TRAFFIC, this._wrapMessage.bind(this, Messages.HEAVY_TRAFFIC));
 
   // Register actions
+  CivicBuildings.registerHandlers(this._mapScanner, this._repairManager);
   Commercial.registerHandlers(this._mapScanner, this._repairManager);
   EmergencyServices.registerHandlers(this._mapScanner, this._repairManager);
   Industrial.registerHandlers(this._mapScanner, this._repairManager);
@@ -292,6 +303,7 @@ Simulation.prototype.init = function() {
   var simData = this._constructSimData();
   this._mapScanner.mapScan(0, this._map.width, simData);
   this._powerManager.doPowerScan(this._census);
+  BlockMapUtils.civicBuildingScan(this.blockMaps);
   BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps);
   BlockMapUtils.crimeScan(this._census, this.blockMaps);
   BlockMapUtils.populationDensityScan(this._map, this.blockMaps);
@@ -366,8 +378,10 @@ var simulate = function(simData) {
       break;
 
     case 12:
-      if ((this._simCycle % speedPollutionTerrainLandValueScan[speedIndex]) === 0)
+      if ((this._simCycle % speedPollutionTerrainLandValueScan[speedIndex]) === 0) {
+        BlockMapUtils.civicBuildingScan(this.blockMaps);
         BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps);
+      }
       break;
 
     case 13:

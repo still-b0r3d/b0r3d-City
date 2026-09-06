@@ -298,24 +298,47 @@ export const NUKESWIRL4     = 955;
 // export const  956-959 unused (originally)
 // original tile count = 960;
 
-// Extended zones: 956-1019
-export const CHURCH1BASE    = 956;
-export const CHURCH1        = 960;
-export const CHURCH2BASE    = 965;
-export const CHURCH2        = 969;
-export const CHURCH3BASE    = 974;
-export const CHURCH3        = 978;
-export const CHURCH4BASE    = 983;
-export const CHURCH4        = 987;
-export const CHURCH5BASE    = 992;
-export const CHURCH5        = 996;
-export const CHURCH6BASE    = 1001;
-export const CHURCH6        = 1005;
-export const CHURCH7BASE    = 1010;
-export const CHURCH7        = 1014;
-export const CHURCH7LAST    = 1018;
+// b0r3d-city custom civic buildings: 956-998, reusing what was "Extended zones: 956-1019"
+// (CHURCH1-7, a set of 7 near-identical filler buildings) plus the always-unused 1020-1023.
+// CHURCH was never actually wired to anything -- no tool button, no auto-spawn trigger
+// anywhere in src/ -- just tile art and a checkZoneSize entry sitting dormant, so there was
+// nothing live to preserve by keeping it. That reclaimed range is also a hard ceiling, not
+// just "the rest of this image": tile values and status flags share one integer per map
+// cell (see tileFlags.ts's ZONEBIT = 0x0400 and BIT_MASK = 0x3FF) -- bit 10 is the first
+// flag bit, so no tile value can ever legally reach 1024 or the two would collide (confirmed
+// the hard way: an earlier attempt at IDs 1024+ silently wrapped placed buildings back to
+// tile values 0-4 on the map). 999-1023 (25 tiles) are left free here for future buildings
+// -- there is no more room beyond that without freeing up more of the existing tileset.
+//
+// "Hospital" is prefixed CIVIC- because HOSPITALBASE/HOSPITAL (405-413) already exist --
+// the original engine auto-builds a hospital inside residential zones once population
+// warrants one (see makeHospital in residential.js), entirely automatically and
+// invisibly to the player, scored into the city evaluation but not a placeable tool.
+// That's a different feature to this one (a player-placed building with its own cost
+// and effect) that just happens to share a real-world name -- kept both rather than
+// removing/renaming the original, matching how orphaned/parallel features are handled
+// elsewhere in this codebase.
+// Civic Hospital (3x3).
+export const CIVICHOSPITALBASE = 956; // First tile of hospital.
+export const CIVICHOSPITAL     = 960; // 'Center' tile of hospital.
+export const LASTCIVICHOSPITAL = 964; // Last tile of hospital.
 
-// tiles 1020-1023 unused
+// School (3x3).
+export const SCHOOLBASE     = 965;
+export const SCHOOL         = 969;
+export const LASTSCHOOL     = 973;
+
+// Casino (4x4).
+export const CASINOBASE     = 974;
+export const CASINO         = 979; // Anchor tile, matching the 4x4 base+5 convention STADIUM/NUCLEAR/POWERPLANT already use.
+export const LASTCASINO     = 989;
+
+// Library (3x3).
+export const LIBRARYBASE    = 990;
+export const LIBRARY        = 994;
+export const LASTLIBRARY    = 998;
+
+// 999-1023 intentionally unused -- free for future b0r3d-city buildings.
 
 export const TILE_COUNT     = 1024;
 

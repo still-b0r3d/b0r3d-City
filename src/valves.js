@@ -29,6 +29,12 @@ var RES_VALVE_RANGE = 2000;
 var COM_VALVE_RANGE = 1500;
 var IND_VALVE_RANGE = 1500;
 
+// Each School/Casino nudges its respective demand ratio directly, independent of the
+// organic employment/migration math below -- applied before the resRatioMax/comRatioMax
+// clamp further down, so building dozens of them can't run demand away unboundedly.
+var SCHOOL_RESIDENTIAL_BOOST = 0.05;
+var CASINO_COMMERCIAL_BOOST = 0.05;
+
 
 var taxTable = [
   200, 150, 120, 100, 80, 50, 30, 0, -10, -40, -100,
@@ -115,6 +121,9 @@ Valves.prototype.setValves = function(gameLevel, census, budget) {
     indRatio = projectedIndPop / census.indPop;
   else
     indRatio = projectedIndPop;
+
+  resRatio += census.schoolPop * SCHOOL_RESIDENTIAL_BOOST;
+  comRatio += census.casinoPop * CASINO_COMMERCIAL_BOOST;
 
   resRatio = Math.min(resRatio, resRatioMax);
   comRatio = Math.min(comRatio, comRatioMax);

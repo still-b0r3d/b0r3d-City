@@ -199,6 +199,7 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
   var terrainDensityMap = blockMaps.terrainDensityMap;
   var pollutionDensityMap = blockMaps.pollutionDensityMap;
   var crimeRateMap = blockMaps.crimeRateMap;
+  var civicBuildingMap = blockMaps.civicBuildingMap;
 
   var x, y, width, height;
 
@@ -255,6 +256,11 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
         // ... getting mugged won't help either
         if (crimeRateMap.get(x, y) > 190)
           landValue -= 20;
+
+        // ... while a nearby Hospital or Library raises the neighbourhood's standing.
+        // civicBuildingMap has a coarser chunk size (8) than landValueMap (2) -- worldGet
+        // handles that scale difference the same way getCityCentreDistance does above.
+        landValue += Math.floor(civicBuildingMap.worldGet(worldX, worldY) / 20);
 
         // Clamp in range 1-250 (0 represents undeveloped land)
         landValue = MiscUtils.clamp(landValue, 1, 250);
@@ -477,7 +483,22 @@ var fireAnalysis = function(blockMaps) {
 };
 
 
+// Smooths the raw per-tile hits civicBuildings.js records for Hospital/Library into a
+// coverage radius, the same way crimeScan does for policeStationMap -- kept as its own
+// step (rather than folded into pollutionTerrainLandValueScan) so it can run before that
+// function needs the smoothed result to compute land value.
+var civicBuildingScan = function(blockMaps) {
+  var civicBuildingMap = blockMaps.civicBuildingMap;
+  var civicBuildingEffectMap = blockMaps.civicBuildingEffectMap;
+
+  smoothMap(civicBuildingMap, civicBuildingEffectMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+  smoothMap(civicBuildingEffectMap, civicBuildingMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+  smoothMap(civicBuildingMap, civicBuildingEffectMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+};
+
+
 var BlockMapUtils = {
+  civicBuildingScan: civicBuildingScan,
   crimeScan: crimeScan,
   fireAnalysis: fireAnalysis,
   neutraliseRateOfGrowthMap: neutraliseRateOfGrowthMap,

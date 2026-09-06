@@ -24,6 +24,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT:
     case TileValues.NUCLEAR:
     case TileValues.STADIUM:
+    case TileValues.CASINO:
       result = {zoneSize: 4, deltaX: 0, deltaY: 0};
       break;
 
@@ -34,6 +35,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 1:
     case TileValues.NUCLEAR + 1:
     case TileValues.STADIUM + 1:
+    case TileValues.CASINO + 1:
       result = {zoneSize: 4, deltaX: -1, deltaY: 0};
       break;
 
@@ -41,6 +43,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 4:
     case TileValues.NUCLEAR + 4:
     case TileValues.STADIUM + 4:
+    case TileValues.CASINO + 4:
       result = {zoneSize: 4, deltaX: 0, deltaY: -1};
       break;
 
@@ -48,6 +51,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 5:
     case TileValues.NUCLEAR + 5:
     case TileValues.STADIUM + 5:
+    case TileValues.CASINO + 5:
       result = {zoneSize: 4, deltaX: -1, deltaY: -1};
       break;
 
@@ -127,13 +131,16 @@ var checkBigZone = function(tileValue) {
 var checkZoneSize = function(tileValue) {
   if ((tileValue >= TileValues.RESBASE - 1        && tileValue <= TileValues.PORTBASE - 1) ||
       (tileValue >= TileValues.LASTPOWERPLANT + 1 && tileValue <= TileValues.POLICESTATION + 4) ||
-      (tileValue >= TileValues.CHURCH1BASE && tileValue <= TileValues.CHURCH7LAST)) {
+      (tileValue >= TileValues.CIVICHOSPITALBASE && tileValue <= TileValues.LASTCIVICHOSPITAL) ||
+      (tileValue >= TileValues.SCHOOLBASE && tileValue <= TileValues.LASTSCHOOL) ||
+      (tileValue >= TileValues.LIBRARYBASE && tileValue <= TileValues.LASTLIBRARY)) {
     return 3;
   }
 
   if ((tileValue >= TileValues.PORTBASE    && tileValue <= TileValues.LASTPORT) ||
       (tileValue >= TileValues.COALBASE    && tileValue <= TileValues.LASTPOWERPLANT) ||
-      (tileValue >= TileValues.STADIUMBASE && tileValue <= TileValues.LASTZONE)) {
+      (tileValue >= TileValues.STADIUMBASE && tileValue <= TileValues.LASTZONE) ||
+      (tileValue >= TileValues.CASINOBASE  && tileValue <= TileValues.LASTCASINO)) {
     return 4;
   }
 

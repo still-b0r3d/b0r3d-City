@@ -252,7 +252,16 @@ Game.prototype.save = function(saveName) {
     date: this.simulation.getDate()
   };
 
-  Storage.saveGame(saveName, saveData, meta);
+  var id = Storage.saveGame(saveName, saveData, meta);
+
+  // saveGame refuses a brand-new slot once MAX_SAVES is already reached --
+  // normally caught by saveWindow.js's own pre-check before this ever runs,
+  // but that check and this write are two separate localStorage reads, so a
+  // save from another tab in between can still let a doomed save through.
+  // The save dialog has already closed by this point, so an alert is the
+  // only way left to tell the player nothing was actually written.
+  if (id === null)
+    window.alert('Save failed: you already have ' + Storage.MAX_SAVES + ' saves. Delete one, then try again.');
 };
 
 
@@ -583,6 +592,11 @@ Game.prototype.handleSaveWindowClosure = function(name) {
 
 
 Game.prototype.handleHighScoreRequest = function() {
+  if (this.dialogOpen) {
+    console.warn('Request made to open high score window. There is a dialog open!');
+    return;
+  }
+
   this.dialogOpen = true;
   this._openWindow = 'highScoreWindow';
   this.highScoreWindow.open({

@@ -68,9 +68,15 @@ var listSaves = function() {
 };
 
 
-var saveExists = function(name) {
+// Returns the existing index entry a given name would collide with -- names
+// are compared after slugify(), so e.g. "City A" and "CITY A" match the same
+// entry -- or null if the name is free. Callers need the actual matched
+// entry (not just a yes/no) so they can tell the player which save they're
+// about to overwrite, since it may not be spelled the way they just typed it.
+var findSave = function(name) {
   var id = slugify(name);
-  return readIndex().some(function(entry) { return entry.id === id; });
+  var matches = readIndex().filter(function(entry) { return entry.id === id; });
+  return matches.length ? matches[0] : null;
 };
 
 
@@ -142,7 +148,7 @@ var transitionOldSave = function(savedGame) {
 
 var Storage = {
   listSaves: listSaves,
-  saveExists: saveExists,
+  findSave: findSave,
   getSave: getSave,
   saveGame: saveGame,
   deleteSave: deleteSave,

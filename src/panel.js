@@ -39,6 +39,14 @@ function isDesktop() {
 // that's never been focused, rather than starting below it.
 var topZIndex = 20;
 
+// Every Panel that's ever been constructed, so a dragged one can check proximity
+// against all the others for edge-snapping. Panels live for the whole game session
+// (none are ever destroyed), so this never needs pruning.
+var allPanels = [];
+
+// How close (px) an edge needs to get before it snaps into alignment.
+var SNAP_THRESHOLD = 15;
+
 
 // id: DOM id of the panel's outer element, which must contain a child <header> to
 // serve as the drag handle -- every rciPanel/.modal window already has one (used
@@ -59,6 +67,8 @@ var Panel = function(id, defaultPosition) {
   this._storageKey = STORAGE_PREFIX + id;
   this._defaultPosition = defaultPosition || null;
   this._dragging = false;
+
+  allPanels.push(this);
 
   this._el.find('header').first().on('mousedown', this._startDrag.bind(this));
   $(document).on('mousemove', this._drag.bind(this));
@@ -121,10 +131,67 @@ Panel.prototype._drag = function(e) {
   if (!this._dragging)
     return;
 
-  this._el.css({
-    left: this._elStartLeft + (e.clientX - this._dragStartX),
-    top: this._elStartTop + (e.clientY - this._dragStartY)
-  });
+  var left = this._elStartLeft + (e.clientX - this._dragStartX);
+  var top = this._elStartTop + (e.clientY - this._dragStartY);
+  var snapped = this._snap(left, top);
+
+  this._el.css({left: snapped.left, top: snapped.top});
+};
+
+
+// Pulls this panel's edges into line with the nearest edge of any other visible
+// panel once within SNAP_THRESHOLD px -- either edge-to-edge (this panel's right
+// meeting another's left, say) or edge-to-matching-edge (both left edges lining
+// up), so a few windows dragged near each other click together into a deliberate
+// cluster -- e.g. Budget and Settings side by side as a makeshift menu -- instead
+// of needing pixel-perfect placement. X and Y snap independently of each other.
+Panel.prototype._snap = function(left, top) {
+  var width = this._el[0].offsetWidth;
+  var height = this._el[0].offsetHeight;
+  var right = left + width;
+  var bottom = top + height;
+
+  var snappedLeft = null;
+  var snappedTop = null;
+
+  for (var i = 0; i < allPanels.length && (snappedLeft === null || snappedTop === null); i++) {
+    var other = allPanels[i];
+    if (other === this || !other._el.is(':visible'))
+      continue;
+
+    var oOffset = other._el.offset();
+    var oLeft = oOffset.left;
+    var oTop = oOffset.top;
+    var oRight = oLeft + other._el[0].offsetWidth;
+    var oBottom = oTop + other._el[0].offsetHeight;
+
+    if (snappedLeft === null) {
+      if (Math.abs(right - oLeft) < SNAP_THRESHOLD)
+        snappedLeft = oLeft - width; // this panel's right edge meets other's left edge
+      else if (Math.abs(left - oRight) < SNAP_THRESHOLD)
+        snappedLeft = oRight; // this panel's left edge meets other's right edge
+      else if (Math.abs(left - oLeft) < SNAP_THRESHOLD)
+        snappedLeft = oLeft; // left edges align
+      else if (Math.abs(right - oRight) < SNAP_THRESHOLD)
+        snappedLeft = oRight - width; // right edges align
+    }
+
+    if (snappedTop === null) {
+      if (Math.abs(bottom - oTop) < SNAP_THRESHOLD)
+        snappedTop = oTop - height; // this panel's bottom edge meets other's top edge
+      else if (Math.abs(top - oBottom) < SNAP_THRESHOLD)
+        snappedTop = oBottom; // this panel's top edge meets other's bottom edge
+      else if (Math.abs(top - oTop) < SNAP_THRESHOLD)
+        snappedTop = oTop; // top edges align
+      else if (Math.abs(bottom - oBottom) < SNAP_THRESHOLD)
+        snappedTop = oBottom - height; // bottom edges align
+    }
+  }
+
+  return {
+    left: snappedLeft === null ? left : snappedLeft,
+    top: snappedTop === null ? top : snappedTop
+  };
 };
 
 

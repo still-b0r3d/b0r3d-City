@@ -352,10 +352,10 @@ var simulate = function(simData) {
 
     case 9:
       if (this._cityTime % CENSUS_FREQUENCY_10 === 0)
-        this._census.take10Census(budget);
+        this._census.take10Census(this.budget);
 
       if (this._cityTime % CENSUS_FREQUENCY_120 === 0)
-        this._census.take120Census(budget);
+        this._census.take120Census(this.budget);
 
       if (this._cityTime % TAX_FREQUENCY === 0)  {
         this.budget.collectTax(this._gameLevel, this._census);

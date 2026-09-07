@@ -561,6 +561,12 @@ nav li {
   text-align: center;
 }
 
+#scenarioList {
+  display: none;
+  width: 500px;
+  text-align: center;
+}
+
 #statisticsList, .queryList {
   width: 400px;
   margin: 0 auto;
@@ -989,7 +995,7 @@ nav li {
     box-sizing: border-box;
   }
 
-  #loadList {
+  #loadList, #scenarioList {
     width: 94vw;
     max-width: 94vw;
     box-sizing: border-box;

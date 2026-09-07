@@ -61,8 +61,7 @@ DisasterManager.prototype.doDisasters = function(census) {
         break;
 
       case 6:
-        // TODO Earthquakes
-        //this.makeEarthquake();
+        this.makeEarthquake();
         break;
 
       case 7:

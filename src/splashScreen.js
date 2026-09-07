@@ -15,12 +15,29 @@ import $ from "jquery";
 
 import { Config } from './config.js';
 import { Game } from './game.js';
+import { GameMap } from './gameMap.js';
 import { MapGenerator } from './mapGenerator.js';
 import { MiscUtils } from './miscUtils.js';
 import { Simulation } from './simulation.js';
 import { SplashCanvas } from './splashCanvas.js';
 import { Storage } from './storage.js';
 import { Text } from './text.js';
+
+// The 8 original Micropolis scenario cities, converted from the classic
+// binary .cty format (see scripts/convert-scenario-cities.mjs) into flat
+// JSON tile arrays under scenarioCities/. These are dropped in as starting
+// maps for freeform play -- no objectives or scripted events, just the
+// classic map layouts to build on (or bulldoze).
+var SCENARIO_CITIES = [
+  { slug: 'dullsville', name: 'Dullsville' },
+  { slug: 'san-francisco', name: 'San Francisco' },
+  { slug: 'hamburg', name: 'Hamburg' },
+  { slug: 'bern', name: 'Bern' },
+  { slug: 'tokyo', name: 'Tokyo' },
+  { slug: 'detroit', name: 'Detroit' },
+  { slug: 'boston', name: 'Boston' },
+  { slug: 'rio-de-janeiro', name: 'Rio de Janeiro' }
+];
 
 /*
  *
@@ -62,6 +79,8 @@ function SplashScreen(tileSet, snowTileSet, spriteSheet) {
   $('#splashPlay').click(acquireNameAndDifficulty.bind(this));
   $('#splashLoad').click(showLoadList.bind(this));
   $('#loadBack').click(hideLoadList.bind(this));
+  $('#splashScenarios').click(showScenarioList.bind(this));
+  $('#scenarioBack').click(hideScenarioList.bind(this));
 
   // Conditionally enable load/save buttons
   $('#saveRequest').prop('disabled', !Storage.canStore);
@@ -152,6 +171,70 @@ var hideLoadList = function(e) {
   e.preventDefault();
   $('#loadList').toggle();
   $('#splash').toggle();
+};
+
+
+var renderScenarioList = function(self) {
+  var rows = SCENARIO_CITIES.map(function(city) {
+    return '<tr><td>' + escapeHtml(city.name) + '</td><td><button type="button" class="scenarioRowPlay" data-slug="' +
+      escapeHtml(city.slug) + '" data-name="' + escapeHtml(city.name) + '">Play</button></td></tr>';
+  });
+
+  $('#scenarioRows').html(rows.join(''));
+
+  $('.scenarioRowPlay').on('click', function(e) {
+    playScenario.call(self, e);
+  });
+};
+
+
+var showScenarioList = function(e) {
+  e.preventDefault();
+  renderScenarioList(this);
+  $('#splash').toggle();
+  $('#scenarioList').toggle();
+};
+
+
+var hideScenarioList = function(e) {
+  e.preventDefault();
+  $('#scenarioList').toggle();
+  $('#splash').toggle();
+};
+
+
+// Fetches a classic scenario city's tile data and builds a GameMap from it, then
+// hands off to the same name/difficulty flow as "Play this map" -- these are
+// freeform starting maps, not scripted scenarios with objectives.
+var playScenario = function(e) {
+  e.preventDefault();
+
+  var slug = $(e.currentTarget).data('slug');
+  var name = $(e.currentTarget).data('name');
+
+  fetch('scenarioCities/' + slug + '.json')
+    .then(function(response) {
+      if (!response.ok)
+        throw new Error('Failed to fetch scenario city ' + slug + ': ' + response.status);
+      return response.json();
+    })
+    .then(function(data) {
+      var map = new GameMap(data.width, data.height);
+      for (var i = 0, l = data.map.length; i < l; i++)
+        map.setTileValue(i % data.width, Math.floor(i / data.width), data.map[i]);
+
+      this.map = map;
+      // Restore the same pre-state acquireNameAndDifficulty expects when called
+      // from #splashPlay: #splash visible, everything else hidden.
+      $('#scenarioList').toggle();
+      $('#splash').toggle();
+      $('#nameForm').val(name);
+      acquireNameAndDifficulty.call(this, e);
+    }.bind(this))
+    .catch(function(err) {
+      console.error(err);
+      window.alert("Sorry, couldn't load that city. Please try again.");
+    });
 };
 
 

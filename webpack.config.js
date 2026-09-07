@@ -35,6 +35,7 @@ function copyStaticAssets() {
       recursivelyCopy('css'),
       recursivelyCopy('images'),
       recursivelyCopy('sprites'),
+      recursivelyCopy('scenarioCities'),
       'LICENSE',
       'COPYING',
     ]

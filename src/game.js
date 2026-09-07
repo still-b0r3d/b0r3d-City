@@ -74,7 +74,24 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
     this.load(savedGame);
 
   this.rci = new RCI('RCIContainer', this.simulation);
-  this.rciPanel = new Panel('rciPanel');
+
+  // The left-hand stack (town info, the menu-button list, and the RCI demand
+  // graph) and the tools column on the right all used to be static, fixed-position
+  // sidebars -- now every one of them is its own Panel, floating/draggable/
+  // snapping just like the modal windows below. Stacked defaultPositions here
+  // roughly reproduce today's at-a-glance layout for a first-time desktop player;
+  // after that, each panel's own dragged position (or size, for the two
+  // resizable ones) takes over via localStorage, same as the modals.
+  this.infoPanel = new Panel('infobar', {left: 50, top: 40});
+  this.miscButtonsPanel = new Panel('miscButtons', {left: 50, top: 230});
+  this.rciPanel = new Panel('rciPanel', {left: 50, top: 500}, {
+    resizable: true, minWidth: 126, minHeight: 100, onResize: this.rci.resize.bind(this.rci)
+  });
+
+  // 222 = #controls' own 172px single-column width (style.css) plus the 50px
+  // .rightedge margin it used to sit in, so this lines up with today's spot.
+  var toolsDefaultPosition = {left: Math.max(10, window.innerWidth - 222), top: 40};
+  this.toolsPanel = new Panel('controls', toolsDefaultPosition, {resizable: true, minWidth: 160, minHeight: 150});
 
   // Note: must init canvas before inputStatus
   this.gameCanvas = new GameCanvas('canvasContainer');

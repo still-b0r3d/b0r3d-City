@@ -40,8 +40,18 @@ function RCI(parentNode, eventSource, id) {
   // is 1 unit of padding
   this._padding = 3; // 3 rectangles in each bit of padding
   this._buckets = 10; // 0.2000 is scaled in to 10 buckets
-  this._rectSize = 5; // Each rect is 5px
+  this._rectSize = 5; // Fallback only -- update() recomputes this to fit the container
   this._scale = Math.floor(2000 / this._buckets);
+
+  // The graph's fixed layout, expressed as a size in rectangle units rather than
+  // pixels: 7*padding wide (matches _drawRect's boxWidth), and enough tall for a
+  // full-height bar on both the positive side (buckets) and the negative side
+  // (buckets again -- see _drawValue), plus the 3 padding gaps between/around them
+  // (top margin, the middle label box, bottom margin). update() below picks the
+  // largest _rectSize that fits both of these inside the container's actual size,
+  // so the whole graph scales as a unit instead of clipping or leaving dead space.
+  this._widthUnits = 7 * this._padding;
+  this._heightUnits = 2 * this._buckets + 3 * this._padding;
 
   this._canvas = $('<canvas></canvas>', {id: id})[0];
 
@@ -55,9 +65,6 @@ function RCI(parentNode, eventSource, id) {
       throw new Error('ID ' + id + ' already exists in document!');
   } else
     parentNode.appendChild(this._canvas);
-
-  // We might be created before our container has appeared on screen
-  this._initialisedBounds = false;
 
   eventSource.addEventListener(VALVES_UPDATED, this.update.bind(this));
 }
@@ -114,15 +121,17 @@ RCI.prototype._drawLabel = function(ctx, index) {
 
 
 RCI.prototype.update = function(data) {
-  if (!this._initialised) {
-    // The canvas is assumed to fill its container on-screen
-    var rect = this._canvas.parentNode.getBoundingClientRect();
-    this._canvas.width = rect.width;
-    this._canvas.height = rect.height;
-    this._canvas.style.margin = '0';
-    this._canvas.style.padding = '0';
-    this._intialised = true;
-  }
+  this._lastData = data;
+
+  // Re-measured on every update (the container is assumed to fill whatever space
+  // its panel gives it) rather than once at construction -- that's what lets the
+  // graph rescale live as rciPanel is resized (see resize() below, wired up as
+  // Panel's onResize in game.js) instead of drawing at a size fixed the first time
+  // this ever ran.
+  var rect = this._canvas.parentNode.getBoundingClientRect();
+  this._rectSize = Math.max(1, Math.floor(Math.min(rect.width / this._widthUnits, rect.height / this._heightUnits)));
+  this._canvas.width = this._widthUnits * this._rectSize;
+  this._canvas.height = this._heightUnits * this._rectSize;
 
   var ctx = this._canvas.getContext('2d');
   this._clear(ctx);
@@ -133,6 +142,16 @@ RCI.prototype.update = function(data) {
     this._drawValue(ctx, i, values[i]);
     this._drawLabel(ctx, i);
   }
+};
+
+
+// Called by Panel as rciPanel's onResize, so the graph redraws immediately while
+// the user is dragging its resize handle instead of waiting for the next
+// VALVES_UPDATED event (which could be a while, and won't fire at all if the
+// simulation is paused).
+RCI.prototype.resize = function() {
+  if (this._lastData)
+    this.update(this._lastData);
 };
 
 

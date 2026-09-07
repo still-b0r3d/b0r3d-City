@@ -279,6 +279,26 @@ nav li {
   user-select: none;
 }
 
+/* Bottom-right resize grip, added by panel.js for any Panel constructed with
+   opts.resizable -- a striped square in the style of a native textarea resize
+   handle. Positioned relative to the panel itself, which is always position:
+   fixed while floated (desktop-only, same as dragging -- see MOBILE_BREAKPOINT
+   in panel.js) or position:relative below as a fallback so it's never left
+   positioning against some unrelated ancestor. */
+.panelResizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background-image: linear-gradient(135deg,
+    transparent 0 40%, rgba(0, 0, 0, 0.35) 40% 50%,
+    transparent 50% 60%, rgba(0, 0, 0, 0.35) 60% 70%,
+    transparent 70% 80%, rgba(0, 0, 0, 0.35) 80% 90%,
+    transparent 90% 100%);
+}
+
 .pointer {
   cursor: pointer;
 }
@@ -332,12 +352,16 @@ nav li {
 
 .toolButton {
   width: 140px;
-  margin-left: 5px;
-  margin-right: 5px;
+  flex: 0 0 auto;
   color: black;
   background-color: white;
   font-size: 12px;
-  display: inline-block;
+  display: block;
+}
+
+.toolButton:hover:not(.selected) {
+  filter: brightness(1.1);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .unselected {
@@ -387,11 +411,43 @@ nav li {
   background-color: limegreen;
 }
 
+#buttons {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* Sizing/position/flex-direction apply on both breakpoints -- the mobile
+   drawer uses this exact box too (see body.showToolsDrawer below), just
+   toggled via display instead of floated. flex-direction is meaningless
+   until something actually sets display:flex, so it's harmless to declare
+   here even though display itself has to stay conditionally gated below. */
 #controls {
   position: absolute;
   top: 40px;
-  width: 305px;
-  height: 220px;
+  width: 172px;
+  /* A single column of every build tool runs taller than most viewports --
+     #buttons above scrolls internally past this cap rather than letting the
+     panel (or the resize handle on its bottom-right corner) run off-screen. */
+  max-height: calc(100vh - 80px);
+  flex-direction: column;
+}
+
+/* Only the flex switch needs :not(.initialHidden)/breakpoint-gating (see
+   #rciPanel below for the full reasoning) -- display is the one property
+   that actually competes with .initialHidden/the max-width:768px drawer
+   rules on specificity; everything else above doesn't, so it can just apply
+   unconditionally like the rest of this rule always did. */
+@media (min-width: 769px) {
+  #controls:not(.initialHidden) {
+    display: flex;
+  }
 }
 
 #debug {
@@ -424,10 +480,6 @@ nav li {
   padding: 0 5px;
 }
 
-#infobar {
-  height: 150px;
-}
-
 /* Shared flow container for the #infobar/#miscButtons stack -- each panel's
    position derives from the flex column instead of hand-copied top offsets,
    so only this rule (and its media-query overrides below) needs to change if
@@ -445,10 +497,6 @@ nav li {
 
 #loadingBanner[data-hasscript=false] {
   display: none;
-}
-
-#miscButtons {
-  height: 204px;
 }
 
 #monstertv {
@@ -496,15 +544,44 @@ nav li {
   height: 24px;
 }
 
-#RCIContainer {
-  /* Sized to the RCI graph's actual drawn footprint (see rci.js's _buckets/
-     _padding/_rectSize math -- a 126x88 canvas is the smallest that doesn't
-     clip the bars) instead of the old 140x140 box, which only matched the
-     width of its former #leftStack neighbors rather than what the graph
-     itself needed. */
+#rciPanel {
+  /* 126x171 is the graph's fixed layout (see rci.js's _widthUnits/
+     _heightUnits) at its original 5px rect size -- tall enough for a
+     full-height bar on both the positive AND negative side of the demand
+     graph (the old 88px height only ever budgeted room for positive bars,
+     silently clipping negative demand). Resizing this panel bigger (desktop
+     only) scales the whole graph up to fill it -- see RCI.prototype.update --
+     rather than just adding blank space. Sizing/flex-direction apply on both
+     breakpoints, same as #controls above: the mobile drawer uses this exact
+     box too (see body.showInfoDrawer below), and flex-direction is a no-op
+     until display:flex actually applies. */
+  position: relative;
+  flex-direction: column;
   width: 126px;
-  height: 88px;
-  margin: 0px;
+  height: 171px;
+}
+
+/* :not(.initialHidden) rather than a plain selector -- an ID selector always
+   beats .initialHidden's class selector on specificity regardless of source
+   order, so a bare "display: flex" here would defeat the hiding before the
+   game even starts (same trap #mobileDrawerToggles avoids above). Scoped to
+   the desktop breakpoint for the same reason as #controls above: without
+   that, this would also outrank the max-width:768px block's own #rciPanel
+   display rules once .initialHidden is gone, even on a phone. */
+@media (min-width: 769px) {
+  #rciPanel:not(.initialHidden) {
+    display: flex;
+  }
+}
+
+#RCIContainer {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #screenshotLink, #screenshotLink:link, #screenshotLink:visited, #screenshotLink:hover {
@@ -653,6 +730,11 @@ nav li {
   background-color: salmon;
 }
 
+#casinoButton {
+  background-color: purple;
+  color: white;
+}
+
 #coalButton {
   background-color: gray;
 }
@@ -666,8 +748,16 @@ nav li {
   background-color: red;
 }
 
+#hospitalButton {
+  background-color: lightblue;
+}
+
 #industrialButton {
   background-color: yellow;
+}
+
+#libraryButton {
+  background-color: tan;
 }
 
 #nuclearButton {
@@ -705,6 +795,10 @@ nav li {
 #roadButton {
   background-color: black;
   color: white;
+}
+
+#schoolButton {
+  background-color: orange;
 }
 
 #stadiumButton {
@@ -876,13 +970,26 @@ nav li {
   }
 
   body.showInfoDrawer #infobar,
-  body.showInfoDrawer #miscButtons,
-  body.showInfoDrawer #rciPanel {
+  body.showInfoDrawer #miscButtons {
     display: block;
   }
 
+  /* #rciPanel and #controls are flex columns (header + a growable/scrollable
+     body) so their resizable desktop layout also works as a drawer -- display:
+     block here would silently drop that flex context and let their content
+     collapse or overflow unpredictably. */
+  body.showInfoDrawer #rciPanel {
+    display: flex;
+  }
+
   body.showToolsDrawer #controls {
-    display: block;
+    display: flex;
+  }
+
+  /* Dragging and resizing are desktop-only (see MOBILE_BREAKPOINT in panel.js) --
+     the grip has nothing to do once a panel is a static drawer. */
+  .panelResizeHandle {
+    display: none;
   }
 
   /* Trimmed from the desktop defaults (10px/20px padding, 10px margin) -- the title

@@ -58,22 +58,45 @@ var SNAP_THRESHOLD = 15;
 // a 768px minimum, well past where either sidebar reaches). Callers whose content is
 // wide enough to need better centring (e.g. the 500px-wide .modal windows) should
 // pass their own defaultPosition rather than rely on this fallback.
-var Panel = function(id, defaultPosition) {
+// opts: optional {resizable, minWidth, minHeight, onResize}. resizable adds a
+// drag handle in the bottom-right corner (desktop only, same as dragging); the
+// panel's content is expected to be laid out so it can actually grow/shrink into
+// whatever size is picked (flex/overflow, not a fixed intrinsic size) -- see
+// rciPanel and #controls for the two panels that use this today. onResize fires
+// on every mousemove while resizing, so content that needs to redraw itself to
+// the new size (the RCI graph) can do so immediately rather than waiting for its
+// own next unrelated update.
+var Panel = function(id, defaultPosition, opts) {
   this._selector = MiscUtils.normaliseDOMid(id);
   this._el = $(this._selector);
   if (this._el.length === 0)
     throw new Error('Node ' + this._selector + ' not found');
 
+  opts = opts || {};
   this._storageKey = STORAGE_PREFIX + id;
   this._defaultPosition = defaultPosition || null;
   this._dragging = false;
+
+  this._resizable = !!opts.resizable;
+  this._minWidth = opts.minWidth || 120;
+  this._minHeight = opts.minHeight || 80;
+  this._onResizeCallback = opts.onResize || null;
+  this._resizing = false;
 
   allPanels.push(this);
 
   this._el.find('header').first().on('mousedown', this._startDrag.bind(this));
   $(document).on('mousemove', this._drag.bind(this));
   $(document).on('mouseup', this._endDrag.bind(this));
-  desktopMediaQuery.addEventListener('change', this._onResize.bind(this));
+  desktopMediaQuery.addEventListener('change', this._onBreakpointChange.bind(this));
+
+  if (this._resizable) {
+    this._handle = $('<div class="panelResizeHandle"></div>');
+    this._el.append(this._handle);
+    this._handle.on('mousedown', this._startResize.bind(this));
+    $(document).on('mousemove', this._resizeMove.bind(this));
+    $(document).on('mouseup', this._endResize.bind(this));
+  }
 
   if (isDesktop())
     this._float();
@@ -85,7 +108,15 @@ Panel.prototype._float = function() {
   // transform:none neutralises .modal's centring transform (translate(-50%,-50%)) --
   // without it, left/top below would end up double-offset by the modal's own width/
   // height on top of wherever we're placing it. No-op for panels with no transform.
-  this._el.css({position: 'fixed', margin: 0, transform: 'none', left: pos.left, top: pos.top});
+  var css = {position: 'fixed', margin: 0, transform: 'none', left: pos.left, top: pos.top};
+  if (this._resizable && pos.width && pos.height) {
+    css.width = pos.width;
+    css.height = pos.height;
+  }
+  this._el.css(css);
+
+  if (this._onResizeCallback)
+    this._onResizeCallback();
 };
 
 
@@ -98,7 +129,10 @@ Panel.prototype._topCentreDefault = function() {
 
 
 Panel.prototype._unfloat = function() {
-  this._el.css({position: '', margin: '', transform: '', left: '', top: ''});
+  // Clearing width/height is a no-op for non-resizable panels (they never get an
+  // inline size in the first place) and hands control back to style.css's drawer
+  // rules for resizable ones, same as position/left/top below.
+  this._el.css({position: '', margin: '', transform: '', left: '', top: '', width: '', height: ''});
 };
 
 
@@ -218,16 +252,62 @@ Panel.prototype._keepOnScreen = function() {
 };
 
 
+Panel.prototype._startResize = function(e) {
+  if (!isDesktop())
+    return;
+
+  this.focus();
+  this._resizing = true;
+  this._resizeStartX = e.clientX;
+  this._resizeStartY = e.clientY;
+  this._resizeStartWidth = this._el[0].offsetWidth;
+  this._resizeStartHeight = this._el[0].offsetHeight;
+  // The handle sits inside the same header-bearing element as the drag handle --
+  // without this, the mousedown would also bubble up and could be mistaken for
+  // the start of a drag by anything else listening on the document.
+  e.stopPropagation();
+  e.preventDefault();
+};
+
+
+Panel.prototype._resizeMove = function(e) {
+  if (!this._resizing)
+    return;
+
+  var width = this._resizeStartWidth + (e.clientX - this._resizeStartX);
+  var height = this._resizeStartHeight + (e.clientY - this._resizeStartY);
+
+  width = MiscUtils.clamp(width, this._minWidth, window.innerWidth - 20);
+  height = MiscUtils.clamp(height, this._minHeight, window.innerHeight - 20);
+
+  this._el.css({width: width, height: height});
+
+  if (this._onResizeCallback)
+    this._onResizeCallback();
+};
+
+
+Panel.prototype._endResize = function() {
+  if (!this._resizing)
+    return;
+
+  this._resizing = false;
+  this._keepOnScreen();
+  this._savePosition();
+};
+
+
 // Crossing the mobile breakpoint live (narrowing/widening the window, rotating a
 // tablet) needs to hand control back and forth between panel.js's inline styles and
 // style.css's drawer rules, or the panel can get stuck floating mid-drawer or vice
 // versa. Bound to desktopMediaQuery's change event above, not window resize.
-Panel.prototype._onResize = function() {
+Panel.prototype._onBreakpointChange = function() {
   if (isDesktop()) {
     this._float();
     this._keepOnScreen();
   } else {
     this._dragging = false;
+    this._resizing = false;
     this._unfloat();
   }
 };
@@ -247,7 +327,12 @@ Panel.prototype._loadPosition = function() {
 Panel.prototype._savePosition = function() {
   try {
     var offset = this._el.offset();
-    window.localStorage.setItem(this._storageKey, JSON.stringify({left: offset.left, top: offset.top}));
+    var data = {left: offset.left, top: offset.top};
+    if (this._resizable) {
+      data.width = this._el[0].offsetWidth;
+      data.height = this._el[0].offsetHeight;
+    }
+    window.localStorage.setItem(this._storageKey, JSON.stringify(data));
   } catch (e) {
     // Nothing we can do if storage is unavailable -- the panel just won't remember
   }

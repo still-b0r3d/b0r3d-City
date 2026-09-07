@@ -4,10 +4,10 @@
   "description": "A port of the open-source simulator \"Micropolis\" to Javascript/HTML5",
   "repository": {
     "type": "git",
-    "url": "https://github.com/graememcc/micropolisJS.git"
+    "url": "https://github.com/still-b0r3d/b0r3d-City.git"
   },
   "bugs": {
-    "url": "https://github.com/graememcc/micropolisJS/issues"
+    "url": "https://github.com/still-b0r3d/b0r3d-City/issues"
   },
   "type": "module",
   "scripts": {

@@ -487,7 +487,14 @@ GameCanvas.prototype._processSprites = function(ctx, spriteList) {
                     destWidth,
                     destWidth);
     } catch (e) {
-      throw new Error('Failed to draw sprite ' + sprite.type + ' frame ' + sprite.frame + ' at ' + sprite.x +  ', ' + sprite.y);
+      // commonAnimate (game.js) only re-schedules the next animation frame
+      // after paint() returns, with nothing upstream catching a throw from
+      // in here -- so letting one bad sprite draw escape doesn't just skip
+      // that sprite, it permanently freezes the game's rendering (the sim
+      // itself keeps ticking in the background; nothing ever gets painted
+      // again). Log it and skip this one sprite instead.
+      console.warn('Failed to draw sprite ' + sprite.type + ' frame ' + sprite.frame + ' at ' + sprite.x + ', ' + sprite.y, e);
+      continue;
     }
 
     // sprite values are in pixels

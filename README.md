@@ -14,7 +14,7 @@ The code is released under the GPLv3 with some additional terms — see [LICENSE
 On top of the original micropolisJS engine, this fork adds:
 
 - A donation-free, b0r3d.org-branded build (custom title/header/welcome text, its own build-ID scheme)
-- A real windowing UI: every dialog (Budget, Evaluation, Settings, etc) is a draggable, independently-positioned window instead of one fixed, centred modal at a time, several can be open together, and dragging one near another snaps it into alignment along the shared edge. Budget is the sole exception that still pauses the sim/dims the screen &mdash; it's the one dialog whose numbers are a snapshot you're meant to act on before time moves again; everything else runs against a live, still-ticking city
+- A real windowing UI: dialogs are draggable, stackable windows that snap to each other's edges, instead of one fixed modal at a time &mdash; Budget's still the exception that pauses the sim while open
 - Four new placeable civic buildings &mdash; Hospital, School, Casino, Library &mdash; each with a real gameplay effect (land-value or demand) rather than just decoration
 - A cheat menu (add funds, free build, one-click disasters), with a `window.b0r3dCheats` console API for testing
 - Named, multi-slot saves (capped at 3, with overwrite/delete confirmation), replacing the original single-slot silent-overwrite save

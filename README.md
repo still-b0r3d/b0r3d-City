@@ -5,8 +5,6 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Windows desktop build:** [still-b0r3d/b0r3d-City-Desktop](https://github.com/still-b0r3d/b0r3d-City-Desktop) — a portable Electron wrapper around this game's build output, kept in its own repo rather than here so this repo doesn't carry the wrapper's ~100MB binary.
-
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
 ## What's different from upstream

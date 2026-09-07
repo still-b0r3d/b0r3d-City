@@ -644,6 +644,22 @@ nav li {
   text-align: center;
 }
 
+#fullScenarioList {
+  display: none;
+  width: 700px;
+  text-align: center;
+}
+
+#fullScenarioTableEl .scenarioBlurb {
+  text-align: left;
+  font-size: 13px;
+}
+
+#fullScenarioTableEl .scenarioYear {
+  font-weight: normal;
+  color: dimgray;
+}
+
 #statisticsList, .queryList {
   width: 400px;
   margin: 0 auto;
@@ -1102,7 +1118,7 @@ nav li {
     box-sizing: border-box;
   }
 
-  #loadList, #scenarioList {
+  #loadList, #scenarioList, #fullScenarioList {
     width: 94vw;
     max-width: 94vw;
     box-sizing: border-box;

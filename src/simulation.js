@@ -619,6 +619,19 @@ Simulation.prototype.getDate = function() {
 };
 
 
+// Read-only access to the census for callers outside the simulate loop (e.g.
+// scenarioController.js, which needs crimeAverage/trafficAverage for
+// scenario objectives) without exposing the rest of Simulation's internals.
+Simulation.prototype.getCensus = function() {
+  return this._census;
+};
+
+
+Simulation.prototype.setStartingYear = function(year) {
+  this._startingYear = year;
+};
+
+
 Simulation.prototype._setYear = function(year) {
   if (year < this._startingYear)
     year = this._startingYear;

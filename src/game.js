@@ -33,6 +33,7 @@ import { QueryWindow } from './queryWindow.js';
 import { Random } from './random.ts';
 import { RCI } from './rci.js';
 import { SaveWindow } from './saveWindow.js';
+import { ScenarioController } from './scenarioController.js';
 import { ScreenshotLinkWindow } from './screenshotLinkWindow.js';
 import { ScreenshotWindow } from './screenshotWindow.js';
 import { SettingsWindow } from './settingsWindow.js';
@@ -228,6 +229,12 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this._reachedTown = this._reachedCity = this._reachedCapital = this._reachedMetropolis = this._reacedMegalopolis = false;
   this.congratsWindow = new CongratsWindow(opacityLayerID, 'congratsWindow');
   this.congratsWindow.addEventListener(Messages.CONGRATS_WINDOW_CLOSED, this._makeGenericCloseHandler(this.congratsWindow));
+
+  // Scenario mode: gameMap carries a `scenario` definition (see scenarios.js)
+  // when launched from the Scenarios list on the splash screen, rather than
+  // Classic Cities (freeform) or a fresh/generated map.
+  if (this.gameMap.scenario)
+    this.scenarioController = new ScenarioController(this, this.gameMap.scenario);
 
   // Every modal window already has its own <header> for a title bar (used today just
   // for the coloured label) -- Panel hooks into that same header as a drag handle and
@@ -754,6 +761,29 @@ Game.prototype.handlePause = function() {
 };
 
 
+// Shared by the population-milestone messages above and scenarioController.js
+// (scenario win/lose). The isOpen check fixes a latent bug from the old
+// single-flag congrats model: two messages close enough together that the
+// second arrives before the first popup was dismissed used to silently
+// re-toggle the same window via open() -> _toggleDisplay(), closing it
+// instead of showing the new message.
+//
+// `force` closes (and replaces) an already-open congrats popup instead of
+// dropping the new message -- scenarioController.js needs this, since a
+// scenario's win/lose message is a one-shot, game-ending event that must
+// never be silently swallowed by a population-milestone popup that happens
+// to be open at that exact moment.
+Game.prototype._showCongrats = function(message, force) {
+  if (force && this._openWindows.indexOf(this.congratsWindow) !== -1)
+    this.congratsWindow.close();
+
+  if (this._openWindows.indexOf(this.congratsWindow) === -1) {
+    this.congratsWindow.open(message);
+    this._registerOpenWindow(this.congratsWindow, 'congratsWindow');
+  }
+};
+
+
 Game.prototype.handleInput = function() {
   // Non-blocking windows (eval, query, etc) no longer stop camera panning -- only
   // budget does (it's the one real blocking dialog), plus a focus check so typing
@@ -842,14 +872,8 @@ Game.prototype.processFrontEndMessage = function(message) {
       this._notificationBar.goodNews(message);
     }
 
-    // The isOpen check also fixes a latent bug from the old single-flag model: two
-    // milestones reached close enough together that a second one arrives before the
-    // first congrats popup was dismissed used to silently re-toggle the same window
-    // via open() -> _toggleDisplay(), closing it instead of showing the new message.
-    if (cMessage !== (this.name + ' is now a ') && this._openWindows.indexOf(this.congratsWindow) === -1) {
-      this.congratsWindow.open(cMessage);
-      this._registerOpenWindow(this.congratsWindow, 'congratsWindow');
-    }
+    if (cMessage !== (this.name + ' is now a '))
+      this._showCongrats(cMessage);
 
     return;
   }

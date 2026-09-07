@@ -18,6 +18,7 @@ import { Game } from './game.js';
 import { GameMap } from './gameMap.js';
 import { MapGenerator } from './mapGenerator.js';
 import { MiscUtils } from './miscUtils.js';
+import { SCENARIOS } from './scenarios.js';
 import { Simulation } from './simulation.js';
 import { SplashCanvas } from './splashCanvas.js';
 import { Storage } from './storage.js';
@@ -81,6 +82,8 @@ function SplashScreen(tileSet, snowTileSet, spriteSheet) {
   $('#loadBack').click(hideLoadList.bind(this));
   $('#splashScenarios').click(showScenarioList.bind(this));
   $('#scenarioBack').click(hideScenarioList.bind(this));
+  $('#splashFullScenarios').click(showFullScenarioList.bind(this));
+  $('#fullScenarioBack').click(hideFullScenarioList.bind(this));
 
   // Conditionally enable load/save buttons
   $('#saveRequest').prop('disabled', !Storage.canStore);
@@ -203,16 +206,12 @@ var hideScenarioList = function(e) {
 };
 
 
-// Fetches a classic scenario city's tile data and builds a GameMap from it, then
-// hands off to the same name/difficulty flow as "Play this map" -- these are
-// freeform starting maps, not scripted scenarios with objectives.
-var playScenario = function(e) {
-  e.preventDefault();
-
-  var slug = $(e.currentTarget).data('slug');
-  var name = $(e.currentTarget).data('name');
-
-  fetch('scenarioCities/' + slug + '.json')
+// Fetches one of scenarioCities/*.json's flat tile arrays and builds a
+// GameMap from it. Shared by freeform Classic Cities and full Scenario mode
+// below -- both start from the same map data, they just differ in what
+// happens after the map is handed off.
+var loadCityMap = function(slug) {
+  return fetch('scenarioCities/' + slug + '.json')
     .then(function(response) {
       if (!response.ok)
         throw new Error('Failed to fetch scenario city ' + slug + ': ' + response.status);
@@ -222,7 +221,22 @@ var playScenario = function(e) {
       var map = new GameMap(data.width, data.height);
       for (var i = 0, l = data.map.length; i < l; i++)
         map.setTileValue(i % data.width, Math.floor(i / data.width), data.map[i]);
+      return map;
+    });
+};
 
+
+// Fetches a classic scenario city's tile data and builds a GameMap from it, then
+// hands off to the same name/difficulty flow as "Play this map" -- these are
+// freeform starting maps, not scripted scenarios with objectives.
+var playScenario = function(e) {
+  e.preventDefault();
+
+  var slug = $(e.currentTarget).data('slug');
+  var name = $(e.currentTarget).data('name');
+
+  loadCityMap(slug)
+    .then(function(map) {
       this.map = map;
       // Restore the same pre-state acquireNameAndDifficulty expects when called
       // from #splashPlay: #splash visible, everything else hidden.
@@ -234,6 +248,63 @@ var playScenario = function(e) {
     .catch(function(err) {
       console.error(err);
       window.alert("Sorry, couldn't load that city. Please try again.");
+    });
+};
+
+
+var renderFullScenarioList = function(self) {
+  var rows = SCENARIOS.map(function(scenario) {
+    return '<tr><td>' + escapeHtml(scenario.name) + ' <span class="scenarioYear">(' + scenario.year + ')</span></td>' +
+      '<td class="scenarioBlurb">' + escapeHtml(scenario.blurb) + '</td>' +
+      '<td><button type="button" class="fullScenarioRowPlay" data-slug="' + escapeHtml(scenario.slug) + '">Play</button></td></tr>';
+  });
+
+  $('#fullScenarioRows').html(rows.join(''));
+
+  $('.fullScenarioRowPlay').on('click', function(e) {
+    playFullScenario.call(self, e);
+  });
+};
+
+
+var showFullScenarioList = function(e) {
+  e.preventDefault();
+  renderFullScenarioList(this);
+  $('#splash').toggle();
+  $('#fullScenarioList').toggle();
+};
+
+
+var hideFullScenarioList = function(e) {
+  e.preventDefault();
+  $('#fullScenarioList').toggle();
+  $('#splash').toggle();
+};
+
+
+// Same map-loading path as Classic Cities, but stamps the chosen scenario
+// definition onto the map so Game (game.js) can hand it to
+// ScenarioController once the game actually launches.
+var playFullScenario = function(e) {
+  e.preventDefault();
+
+  var slug = $(e.currentTarget).data('slug');
+  var scenario = SCENARIOS.filter(function(s) { return s.slug === slug; })[0];
+  if (!scenario)
+    return;
+
+  loadCityMap(scenario.mapSlug)
+    .then(function(map) {
+      map.scenario = scenario;
+      this.map = map;
+      $('#fullScenarioList').toggle();
+      $('#splash').toggle();
+      $('#nameForm').val(scenario.name);
+      acquireNameAndDifficulty.call(this, e);
+    }.bind(this))
+    .catch(function(err) {
+      console.error(err);
+      window.alert("Sorry, couldn't load that scenario. Please try again.");
     });
 };
 

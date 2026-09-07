@@ -5,11 +5,22 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
+**Version:** 0.89 — the first versioned release. Everything below shipped as part of it.
+
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
+
+## Downloads
+
+The web version at the link above is always current. For a desktop build, grab one from [this repo's Releases](https://github.com/still-b0r3d/b0r3d-City/releases):
+
+- **`b0r3d-city.exe`** — the full game, offline. Bundles a snapshot of this version, so it works with no internet connection, but won't pick up anything past v0.89 on its own.
+- **`b0r3d-city-online.exe`** — a thin launcher that just opens the live site above in its own window. Needs a connection, but always shows whatever's actually live.
+
+Both are unsigned portable Windows executables — no install required, just run one. Windows SmartScreen may warn on first run.
 
 ## What's different from upstream
 
-On top of the original micropolisJS engine, this fork adds:
+On top of the original micropolisJS engine, this fork's first release (v0.89) adds:
 
 - A donation-free, b0r3d.org-branded build (custom title/header/welcome text, its own build-ID scheme)
 - A real windowing UI: dialogs are draggable, stackable windows that snap to each other's edges, instead of one fixed modal at a time &mdash; Budget's still the exception that pauses the sim while open

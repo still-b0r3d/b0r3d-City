@@ -17,7 +17,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <meta name="description" content="Play b0r3d-city, a browser-based city builder with zoom, touch support, a shared leaderboard, and 8 classic scenario cities to start from! Built on micropolisJS, a handwritten HTML5/Javascript port of the open-source city simulator Micropolis.">
+    <meta name="description" content="Play b0r3d-city, a browser-based city builder with zoom, touch support, a shared leaderboard, 9 scenario challenges, and 8 classic cities to start from! Built on micropolisJS, a handwritten HTML5/Javascript port of the open-source city simulator Micropolis.">
     <link rel="stylesheet" media="screen" type="text/css" href="css/style.css?<%= htmlWebpackPlugin.options.gitHash %>">
     <title>About | b0r3d-city</title>
   </head>
@@ -41,8 +41,24 @@
         </p>
         <h3 class="alignCenter chunk">Classic Cities</h3>
         <p>
-          From the welcome screen, Classic Cities drops you into one of the 8 original Micropolis scenario maps&mdash;Dullsville, San Francisco, Hamburg, Bern, Tokyo, Detroit, Boston, and Rio de Janeiro&mdash;fully built out and ready to go. There's no objective or scripted disaster waiting for you (that's a different, bigger feature for another day); think of it as a head start with history, not a puzzle to solve. Bulldoze it flat or build around what's already there&mdash;it's yours now.
+          From the welcome screen, Classic Cities drops you into one of the 8 original Micropolis scenario maps&mdash;Dullsville, San Francisco, Hamburg, Bern, Tokyo, Detroit, Boston, and Rio de Janeiro&mdash;fully built out and ready to go, with no objective or deadline attached. Think of it as a head start with history, not a puzzle to solve. Bulldoze it flat or build around what's already there&mdash;it's yours now. Want an actual goal instead? The same 8 cities show up again under Scenarios, below.
         </p>
+        <h3 class="alignCenter chunk">Scenarios</h3>
+        <p>
+          Scenarios takes the same historical cities and gives you something to actually do: an objective, a deadline, and&mdash;for most of them&mdash;a disaster that's already underway the moment you arrive. Hit the target before time runs out, or don't.
+        </p>
+        <ul>
+          <li><strong>Dullsville (1900, 20 years):</strong> Nothing's wrong here. That's the problem. Grow the population past 8,000 before Dullsville lives up to its name forever.</li>
+          <li><strong>San Francisco (1906, 10 years):</strong> The earthquake already hit. Rebuild to a city score of 650 before the city gives up on itself.</li>
+          <li><strong>Hamburg (1944, 10 years):</strong> The bombing raids just ended and the fires are still going. Hit a city score of 650.</li>
+          <li><strong>Bern (1965, 15 years):</strong> Gridlock, everywhere. Get average traffic down to 80 or under before it strangles the city.</li>
+          <li><strong>Tokyo (1957, 10 years):</strong> Something enormous just came ashore, and it's angry. Survive it and hit a city score of 600.</li>
+          <li><strong>Detroit (1972, 15 years):</strong> Crime has the run of the place. Get the average crime rate under 60 and take the city back.</li>
+          <li><strong>Boston (2010, 10 years):</strong> The reactor melted down. Contain the damage and reach a city score of 650.</li>
+          <li><strong>Rio de Janeiro (2047, 10 years):</strong> The water rose and it hasn't gone back down. Rebuild above the flood line to a city score of 650.</li>
+          <li><strong>Zombies (2031, 25 years):</strong> The one original scenario, not from the classic 8&mdash;the horde comes back every 5 years and it's not picky about who's in the way. Hold the population at 5,000 or above until the 25 years are up.</li>
+        </ul>
+        <h3 class="alignCenter chunk">Zones &amp; Buildings</h3>
           <ul>
           <li><strong>Residential zones:</strong> Your citizens need somewhere to live! Use this tool to lay out residential zones, and watch people move in. Watch out though: no-one wants to live anywhere polluted!</li>
           <li><strong>Commercial zones:</strong>Sometimes your citizens need to pop round to the shops for some milk. However, they're screwed if there are no shops! Commercial zones contain the shops and offices that will power the economy.</li>
@@ -69,15 +85,15 @@
           The evaluation tool can provide insight into the opinion of the city's inhabitants, and the query tool offers finer-grained insight.
         </p>
         <p>
-          Proud of what you've built (or how spectacularly it's burning)? Hit High Scores to submit your city to a leaderboard shared with the rest of b0r3d.org's games. Three letters is all the fame you get, but it's yours.
+          Proud of what you've built (or how spectacularly it's burning)? Hit High Scores to submit your city to a leaderboard shared with the rest of b0r3d.org's games. Three letters is all the fame you get, but it's yours. (Used the cheat menu on this city? No judgement, but it won't be eligible for the leaderboard.)
         </p>
         <h3 class="alignCenter chunk">Getting Around</h3>
         <p>
-          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time.
+          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around.
         </p>
         <h3 class="alignCenter chunk">Windows</h3>
         <p>
-          Every panel&mdash;Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
+          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Demand graph and Tools windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
         </p>
         <h3 class="alignCenter chunk">Saving Your City</h3>
         <p>

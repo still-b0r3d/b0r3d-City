@@ -27,17 +27,19 @@ var ModalWindow = function(constructorFunction, focusID) {
 
 
   newConstructor.prototype._toggleDisplay = function() {
-    var opacityLayer = $(this._opacityLayer);
-    opacityLayer = opacityLayer.length === 0 ? null : opacityLayer;
-    if (opacityLayer === null)
-      throw new Error('Node ' + this._opacityLayer + ' not found');
-
     var modalWindow = $(this._windowID);
     modalWindow = modalWindow.length === 0 ? null : modalWindow;
     if (modalWindow === null)
       throw new Error('Node ' + this._windowID + ' not found');
 
-    opacityLayer.toggle();
+    // The backdrop (_opacityLayer) used to be toggled right here alongside the window
+    // itself, back when exactly one window could ever be open at a time. Now that
+    // Game tracks a whole set of open windows, a shared backdrop can't be toggled
+    // independently by each one -- two windows open/closing in either order would
+    // desync it from the true count. Game.prototype._updateBackdrop owns it instead,
+    // driven by _openWindows.length; _opacityLayer is kept on the instance (unused
+    // here) since every caller still passes it and it may yet be useful for a
+    // per-window backdrop policy (e.g. only budget dimming) later.
     modalWindow.toggle();
 
     if (focusID !== null)

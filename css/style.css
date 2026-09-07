@@ -237,6 +237,11 @@ nav li {
 
 .modal header {
   height: 18px;
+  /* panel.js grabs any window's <header> as its drag handle -- these already needed
+     one for the title bar, so this is the only CSS change needed to make every
+     .modal window draggable alongside it. */
+  cursor: move;
+  user-select: none;
 }
 
 .mintcream, .neutral {
@@ -261,6 +266,17 @@ nav li {
 
 .padding10 {
   padding: 10px;
+}
+
+.panelHeader {
+  height: 18px;
+  padding: 4px 6px;
+  background-color: darkslategray;
+  color: white;
+  font-family: sans-serif;
+  font-size: 12px;
+  cursor: move;
+  user-select: none;
 }
 
 .pointer {
@@ -412,10 +428,13 @@ nav li {
   height: 150px;
 }
 
-/* Shared flow container for the #infobar/#miscButtons/#RCIContainer stack --
-   each panel's position derives from the flex column instead of hand-copied
-   top offsets, so only this rule (and its media-query overrides below) needs
-   to change if the stack's height budget changes. */
+/* Shared flow container for the #infobar/#miscButtons stack -- each panel's
+   position derives from the flex column instead of hand-copied top offsets,
+   so only this rule (and its media-query overrides below) needs to change if
+   the stack's height budget changes. #rciPanel also starts life here (so the
+   mobile drawer treats it like any other drawer panel), but panel.js lifts it
+   out of this flow on desktop via position:fixed once the window is wide
+   enough to float it -- see panel.js and its MOBILE_BREAKPOINT constant. */
 #leftStack {
   position: absolute;
   top: 40px;
@@ -478,8 +497,13 @@ nav li {
 }
 
 #RCIContainer {
-  width: 140px;
-  height: 140px;
+  /* Sized to the RCI graph's actual drawn footprint (see rci.js's _buckets/
+     _padding/_rectSize math -- a 126x88 canvas is the smallest that doesn't
+     clip the bars) instead of the old 140x140 box, which only matched the
+     width of its former #leftStack neighbors rather than what the graph
+     itself needed. */
+  width: 126px;
+  height: 88px;
   margin: 0px;
 }
 
@@ -841,13 +865,13 @@ nav li {
      of always-on. #monstertv and #debug aren't included: both already manage their own
      show/hide independently of game start (inline style via jQuery .show()/.hide()), so
      folding them into the drawer classes here would just fight that. */
-  #infobar, #miscButtons, #RCIContainer, #controls {
+  #infobar, #miscButtons, #rciPanel, #controls {
     display: none;
   }
 
   body.showInfoDrawer #infobar,
   body.showInfoDrawer #miscButtons,
-  body.showInfoDrawer #RCIContainer {
+  body.showInfoDrawer #rciPanel {
     display: block;
   }
 

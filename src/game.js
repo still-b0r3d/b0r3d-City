@@ -28,6 +28,7 @@ import { InputStatus } from './inputStatus.js';
 import * as Messages from './messages.ts';
 import { MonsterTV } from './monsterTV.js';
 import { Notification } from './notification.js';
+import { Panel } from './panel.js';
 import { QueryWindow } from './queryWindow.js';
 import { Random } from './random.ts';
 import { RCI } from './rci.js';
@@ -73,14 +74,18 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
     this.load(savedGame);
 
   this.rci = new RCI('RCIContainer', this.simulation);
+  this.rciPanel = new Panel('rciPanel');
 
   // Note: must init canvas before inputStatus
   this.gameCanvas = new GameCanvas('canvasContainer');
   this.gameCanvas.init(this.gameMap, this.tileSet, spriteSheet);
   this.inputStatus = new InputStatus(this.gameMap, this.gameCanvas);
 
-  this.dialogOpen = false;
-  this._openWindow = null;
+  // Every currently-open dialog/window instance (BudgetWindow, EvaluationWindow,
+  // etc), in no particular order -- z-index (via each one's Panel) is what tracks
+  // which is topmost, not this array's order. See _registerOpenWindow/
+  // _deregisterWindow/_getTopmostWindow below.
+  this._openWindows = [];
   this.cheatMenuEnabled = false;
   this.mouse = null;
   this.lastCoord = null;
@@ -93,15 +98,13 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   var opacityLayerID = 'opaque';
 
-  this.genericDialogClosure = genericDialogClosure.bind(this);
-
   // Hook up listeners to open/close evaluation window
   this.handleEvalRequest = makeWindowOpenHandler('eval', function() {
     return [this.simulation.evaluation];
   }.bind(this));
 
   this.evalWindow = new EvaluationWindow(opacityLayerID, 'evalWindow');
-  this.evalWindow.addEventListener(Messages.EVAL_WINDOW_CLOSED, this.genericDialogClosure);
+  this.evalWindow.addEventListener(Messages.EVAL_WINDOW_CLOSED, this._makeGenericCloseHandler(this.evalWindow));
   this.inputStatus.addEventListener(Messages.EVAL_REQUESTED, this.handleEvalRequest.bind(this));
 
   // ... and similarly for the budget window
@@ -152,7 +155,7 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   // ... the screenshot link window
   this.screenshotLinkWindow = new ScreenshotLinkWindow(opacityLayerID, 'screenshotLinkWindow');
-  this.screenshotLinkWindow.addEventListener(Messages.SCREENSHOT_LINK_CLOSED, this.genericDialogClosure);
+  this.screenshotLinkWindow.addEventListener(Messages.SCREENSHOT_LINK_CLOSED, this._makeGenericCloseHandler(this.screenshotLinkWindow));
 
   // ... the save window
   this.saveWindow = new SaveWindow(opacityLayerID, 'saveWindow');
@@ -160,16 +163,16 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   // ... the high score window
   this.highScoreWindow = new HighScoreWindow(opacityLayerID, 'highScoreWindow');
-  this.highScoreWindow.addEventListener(Messages.HIGH_SCORE_WINDOW_CLOSED, this.genericDialogClosure);
+  this.highScoreWindow.addEventListener(Messages.HIGH_SCORE_WINDOW_CLOSED, this._makeGenericCloseHandler(this.highScoreWindow));
   this.inputStatus.addEventListener(Messages.HIGH_SCORE_REQUESTED, this.handleHighScoreRequest.bind(this));
 
   // ... the touch warn window
   this.touchWindow = new TouchWarnWindow(opacityLayerID, 'touchWarnWindow');
-  this.touchWindow.addEventListener(Messages.TOUCH_WINDOW_CLOSED, this.genericDialogClosure);
+  this.touchWindow.addEventListener(Messages.TOUCH_WINDOW_CLOSED, this._makeGenericCloseHandler(this.touchWindow));
 
   // ... and finally the query window
   this.queryWindow = new QueryWindow(opacityLayerID, 'queryWindow');
-  this.queryWindow.addEventListener(Messages.QUERY_WINDOW_CLOSED, this.genericDialogClosure);
+  this.queryWindow.addEventListener(Messages.QUERY_WINDOW_CLOSED, this._makeGenericCloseHandler(this.queryWindow));
   this.inputStatus.addEventListener(Messages.QUERY_WINDOW_NEEDED, this.handleQueryRequest.bind(this));
 
   // Listen for clicks on the save button
@@ -207,7 +210,31 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // Track when various milestones are first reached
   this._reachedTown = this._reachedCity = this._reachedCapital = this._reachedMetropolis = this._reacedMegalopolis = false;
   this.congratsWindow = new CongratsWindow(opacityLayerID, 'congratsWindow');
-  this.congratsWindow.addEventListener(Messages.CONGRATS_WINDOW_CLOSED, this.genericDialogClosure);
+  this.congratsWindow.addEventListener(Messages.CONGRATS_WINDOW_CLOSED, this._makeGenericCloseHandler(this.congratsWindow));
+
+  // Every modal window already has its own <header> for a title bar (used today just
+  // for the coloured label) -- Panel hooks into that same header as a drag handle and
+  // takes over from .modal's centring transform once dragged, without changing any of
+  // these windows' own open/close/business logic. Below the mobile breakpoint Panel
+  // backs off entirely, same as rciPanel above, so these stay centred and static on
+  // phones. Keyed by DOM id (not by the window's Game property name -- e.g. budget's
+  // property is budgetWindow but its element id is just "budget") so
+  // _registerOpenWindow/_focusWindow can look one up given the id a window's own
+  // open handler already knows.
+  var floatableModalIDs = [
+    'budget', 'evalWindow', 'disasterWindow', 'queryWindow', 'congratsWindow',
+    'saveWindow', 'screenshotLinkWindow', 'screenshotWindow', 'settingsWindow',
+    'debugWindow', 'highScoreWindow', 'touchWarnWindow'
+  ];
+  // 500 here matches .modal's shared width in style.css -- update both together.
+  var modalDefaultPosition = {
+    left: Math.max(10, Math.round((window.innerWidth - 500) / 2)),
+    top: 40
+  };
+  this._panelsById = {};
+  floatableModalIDs.forEach(function(id) {
+    this._panelsById[id] = new Panel(id, modalDefaultPosition);
+  }.bind(this));
 
   // Touch is a properly supported input now (zoom, pan, tap-to-place, and a mobile
   // drawer layout all exist), so the old "you might be in for a bad time" warning this
@@ -291,9 +318,98 @@ Game.prototype.revealControls = function() {
 };
 
 
-var genericDialogClosure = function() {
-  this.dialogOpen = false;
-  this._openWindow = null;
+// For windows whose close event carries nothing Game needs to act on beyond the
+// bookkeeping itself (eval, query, congrats, screenshot-link, high scores, the dead
+// touch-warn window) -- bespoke handlers below (budget, disaster, settings, debug,
+// screenshot, save) still apply their own close-time side effects, they just also
+// call _deregisterWindow directly instead of using this.
+Game.prototype._makeGenericCloseHandler = function(windowInstance) {
+  var self = this;
+  return function() {
+    self._deregisterWindow(windowInstance);
+  };
+};
+
+
+Game.prototype._hasOpenWindow = function() {
+  return this._openWindows.length > 0;
+};
+
+
+// Budget is the one window that's still a real, blocking dialog (see
+// _updateBackdrop and tick below) -- it's the only one whose numbers are a
+// snapshot you're meant to act on before time moves again. Everything else is
+// non-blocking: the sim keeps running and there's no backdrop, so they can be
+// used to watch/inspect a live city (Query especially) rather than a frozen one.
+Game.prototype._isBudgetOpen = function() {
+  return this._openWindows.indexOf(this.budgetWindow) !== -1;
+};
+
+
+// True while a real form control (not just some open window) has focus --
+// distinct from _isBudgetOpen: a save name, high-score initials, or any other
+// text field belonging to a non-blocking window should still catch arrow-key
+// input as typing, not have it double as camera panning underneath.
+Game.prototype._isTypingInForm = function() {
+  var tag = document.activeElement && document.activeElement.tagName;
+  return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+};
+
+
+Game.prototype._registerOpenWindow = function(windowInstance, panelId) {
+  if (this._openWindows.indexOf(windowInstance) === -1)
+    this._openWindows.push(windowInstance);
+
+  this._focusWindow(panelId);
+  this._updateBackdrop();
+};
+
+
+Game.prototype._deregisterWindow = function(windowInstance) {
+  var idx = this._openWindows.indexOf(windowInstance);
+  if (idx !== -1)
+    this._openWindows.splice(idx, 1);
+
+  this._updateBackdrop();
+};
+
+
+Game.prototype._focusWindow = function(panelId) {
+  var panel = this._panelsById[panelId];
+  if (panel)
+    panel.focus();
+};
+
+
+// Only budget dims the screen now -- everything else is non-blocking and floats
+// over a fully visible, still-interactive game. This still has to be centralised
+// rather than left to each window's own toggle: with several windows able to be
+// open at once, independent toggle() calls would desync from the true state (e.g.
+// budget opening on top of an already-open eval, then eval closing first, would
+// otherwise hide the backdrop while budget's still up).
+Game.prototype._updateBackdrop = function() {
+  $('#opaque')[this._isBudgetOpen() ? 'show' : 'hide']();
+};
+
+
+// Among currently-open windows, the one whose element has the highest z-index --
+// i.e. whichever was most recently opened or focus()ed via its Panel. Escape needs
+// this because, unlike before, there's no longer a single _openWindow to assume.
+Game.prototype._getTopmostWindow = function() {
+  var topWindow = null;
+  var topZ = -1;
+
+  for (var i = 0; i < this._openWindows.length; i++) {
+    var win = this._openWindows[i];
+    var z = parseInt($(win._windowID).css('z-index'), 10) || 0;
+
+    if (z > topZ) {
+      topZ = z;
+      topWindow = win;
+    }
+  }
+
+  return topWindow;
 };
 
 
@@ -306,7 +422,7 @@ Game.prototype.onDateChange = function(date) {
 
 
 Game.prototype.handleDisasterWindowClosure = function(request) {
-  this.dialogOpen = false;
+  this._deregisterWindow(this.disasterWindow);
 
   if (request === DisasterWindow.DISASTER_NONE)
     return;
@@ -339,7 +455,7 @@ Game.prototype.handleDisasterWindowClosure = function(request) {
 
 
 Game.prototype.handleSettingsWindowClosure = function(actions) {
-  this.dialogOpen = false;
+  this._deregisterWindow(this.settingsWindow);
 
   for (var i = 0, l = actions.length; i < l; i++) {
     var a = actions[i];
@@ -439,7 +555,7 @@ Game.prototype.cheatGetState = function() {
 
 
 Game.prototype.handleDebugWindowClosure = function(actions) {
-  this.dialogOpen = false;
+  this._deregisterWindow(this.debugWindow);
 
   for (var i = 0, l = actions.length; i < l; i++) {
     var a = actions[i];
@@ -465,7 +581,7 @@ Game.prototype.handleDebugWindowClosure = function(actions) {
 
 
 Game.prototype.handleScreenshotWindowClosure = function(action) {
-  this.dialogOpen = false;
+  this._deregisterWindow(this.screenshotWindow);
 
   if (action === null)
     return;
@@ -476,14 +592,13 @@ Game.prototype.handleScreenshotWindowClosure = function(action) {
   else if (action === ScreenshotWindow.SCREENSHOT_ALL)
     dataURI = this.gameCanvas.screenshotMap();
 
-  this.dialogOpen = true;
-  this._openWindow = 'screenshotLinkWindow';
   this.screenshotLinkWindow.open(dataURI);
+  this._registerOpenWindow(this.screenshotLinkWindow, 'screenshotLinkWindow');
 };
 
 
 Game.prototype.handleBudgetWindowClosure = function(data) {
-  this.dialogOpen = false;
+  this._deregisterWindow(this.budgetWindow);
 
   if (!data.cancelled) {
     this.simulation.budget.roadPercent = data.roadPercent / 100;
@@ -502,22 +617,26 @@ Game.prototype.handleBudgetWindowClosure = function(data) {
 
 var makeWindowOpenHandler = function(winName, customFn) {
   customFn = customFn || null;
+  var win = winName + 'Window';
+  // Every one of these window elements is named "<winName>Window" except budget's,
+  // whose element id is just "budget" (see index.html) -- special-cased here rather
+  // than renamed there, since the element id is also what budget.js/CSS/etc already
+  // key off of.
+  var panelId = (winName === 'budget') ? 'budget' : win;
 
   return function() {
-    if (this.dialogOpen) {
-      console.warn('Request made to open ' + winName + ' window. There is a dialog open!');
+    var windowInstance = this[win];
+
+    // Already open -- bring it forward instead of re-opening (re-running .open()
+    // would re-toggle its _toggleDisplay() and close it instead).
+    if (this._openWindows.indexOf(windowInstance) !== -1) {
+      this._focusWindow(panelId);
       return;
     }
 
-    this.dialogOpen = true;
-    this._openWindow = winName + 'Window';
-    var win = winName + 'Window';
-    var data = [];
-
-    if (customFn)
-      data = customFn();
-
-    this[win].open.apply(this[win], data);
+    var data = customFn ? customFn() : [];
+    windowInstance.open.apply(windowInstance, data);
+    this._registerOpenWindow(windowInstance, panelId);
   };
 };
 
@@ -571,20 +690,18 @@ Game.prototype.handleTool = function(data) {
 
 
 Game.prototype.handleSave = function() {
-  if (this.dialogOpen) {
-    console.warn('Request made to open save window. There is a dialog open!');
+  if (this._openWindows.indexOf(this.saveWindow) !== -1) {
+    this._focusWindow('saveWindow');
     return;
   }
 
-  this.dialogOpen = true;
-  this._openWindow = 'saveWindow';
   this.saveWindow.open({defaultName: this.name, saves: Storage.listSaves()});
+  this._registerOpenWindow(this.saveWindow, 'saveWindow');
 };
 
 
 Game.prototype.handleSaveWindowClosure = function(name) {
-  this.dialogOpen = false;
-  this._openWindow = null;
+  this._deregisterWindow(this.saveWindow);
 
   if (name)
     this.save(name);
@@ -592,19 +709,18 @@ Game.prototype.handleSaveWindowClosure = function(name) {
 
 
 Game.prototype.handleHighScoreRequest = function() {
-  if (this.dialogOpen) {
-    console.warn('Request made to open high score window. There is a dialog open!');
+  if (this._openWindows.indexOf(this.highScoreWindow) !== -1) {
+    this._focusWindow('highScoreWindow');
     return;
   }
 
-  this.dialogOpen = true;
-  this._openWindow = 'highScoreWindow';
   this.highScoreWindow.open({
     score: this.simulation.evaluation.cityScore,
     level: HighScoreWindow.classNameToLevel(this.simulation.evaluation.cityClass),
     population: this.simulation.evaluation.cityPop,
     cheatsUsed: this._cheatsUsed
   });
+  this._registerOpenWindow(this.highScoreWindow, 'highScoreWindow');
 };
 
 
@@ -622,7 +738,11 @@ Game.prototype.handlePause = function() {
 
 
 Game.prototype.handleInput = function() {
-  if (!this.dialogOpen) {
+  // Non-blocking windows (eval, query, etc) no longer stop camera panning -- only
+  // budget does (it's the one real blocking dialog), plus a focus check so typing
+  // into any window's own field (a save name, high-score initials) doesn't also
+  // pan the map underneath.
+  if (!this._isBudgetOpen() && !this._isTypingInForm()) {
     // Handle keyboard movement
 
     if (this.inputStatus.left)
@@ -636,12 +756,13 @@ Game.prototype.handleInput = function() {
   }
 
   if (this.inputStatus.escape) {
-    // We need to handle escape, as InputStatus won't know what dialogs are showing
-    if (this.dialogOpen) {
-      this.dialogOpen = false;
-      this[this._openWindow].close();
-      this._openWindow = null;
-    } else
+    // We need to handle escape, as InputStatus won't know what dialogs are showing.
+    // Closes whichever window is topmost -- its own close() fires the *_CLOSED
+    // event that's wired to _deregisterWindow (directly or via
+    // _makeGenericCloseHandler), so that's all that's needed here.
+    if (this._hasOpenWindow())
+      this._getTopmostWindow().close();
+    else
       this.inputStatus.clearTool();
   }
 };
@@ -650,9 +771,8 @@ Game.prototype.handleInput = function() {
 // Will be bound on construction
 var touchListener = function(e) {
   window.removeEventListener('touchstart', this.touchListener, false);
-  this._openWindow = 'touchWindow';
-  this.dialogOpen = true;
   this.touchWindow.open();
+  this._registerOpenWindow(this.touchWindow, 'touchWarnWindow');
 };
 
 
@@ -705,10 +825,13 @@ Game.prototype.processFrontEndMessage = function(message) {
       this._notificationBar.goodNews(message);
     }
 
-    if (cMessage !== (this.name + ' is now a ')) {
-      this.dialogOpen = true;
-      this._openWindow = 'congratsWindow';
+    // The isOpen check also fixes a latent bug from the old single-flag model: two
+    // milestones reached close enough together that a second one arrives before the
+    // first congrats popup was dismissed used to silently re-toggle the same window
+    // via open() -> _toggleDisplay(), closing it instead of showing the new message.
+    if (cMessage !== (this.name + ' is now a ') && this._openWindows.indexOf(this.congratsWindow) === -1) {
       this.congratsWindow.open(cMessage);
+      this._registerOpenWindow(this.congratsWindow, 'congratsWindow');
     }
 
     return;
@@ -780,7 +903,9 @@ Game.prototype.calculateSpritesForPaint = function(canvas) {
 var tick = function() {
   this.handleInput();
 
-  if (this.dialogOpen) {
+  // Only budget pauses the sim now -- every other window is non-blocking, so the
+  // city keeps running (and Query keeps reflecting a live map) while they're open.
+  if (this._isBudgetOpen()) {
     window.setTimeout(this.tick, 0);
     return;
   }

@@ -1,6 +1,6 @@
 import { Tile } from "../src/tile";
 import * as TileFlags from "../src/tileFlags";
-import { DIRT, FLOOD, LIGHTNINGBOLT, TILE_COUNT, TILE_INVALID } from "../src/tileValues";
+import { DIRT, FLOOD, LIGHTNINGBOLT, TILE_INVALID } from "../src/tileValues";
 
 describe("The Tile constructor", () => {
 
@@ -58,7 +58,7 @@ describe("The Tile constructor", () => {
         });
 
         it("should throw if called with a tile value higher than the maximum", () => {
-            const apiAbuse = () => new Tile(TILE_COUNT);
+            const apiAbuse = () => new Tile(TileFlags.BIT_START);
 
             expect(apiAbuse).toThrow();
         });
@@ -373,7 +373,7 @@ describe("when setting both the tile value and flags", () => {
     it("should throw if called with a tile value higher than the maximum", () => {
         const tile = new Tile();
 
-        const apiAbuse = () => tile.set(TILE_COUNT, TileFlags.NOFLAGS);
+        const apiAbuse = () => tile.set(TileFlags.BIT_START, TileFlags.NOFLAGS);
 
         expect(apiAbuse).toThrow();
     });

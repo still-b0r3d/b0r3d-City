@@ -1,5 +1,5 @@
 import { Position } from './position.ts';
-import { CASINO, CIVICHOSPITAL, LIBRARY, SCHOOL } from "./tileValues.ts";
+import { CUSTOM_BUILDINGS } from './customBuildings.js';
 
 // Shared by all four of b0r3d-city's custom buildings: unpowered or road-disconnected
 // halves a building's effectiveness, exactly matching Police/Fire Station's treatment
@@ -22,9 +22,8 @@ var applyCoverageModifiers = function(map, x, y, simData, effect) {
 // Police/Fire Station use for crime/fire risk (see emergencyServices.js and
 // civicBuildingScan in blockMapUtils.js) -- both share one civicBuildingMap since they
 // contribute to the same underlying "land value bonus", not two separate systems.
-var HOSPITAL_LAND_VALUE_EFFECT = 400;
-var LIBRARY_LAND_VALUE_EFFECT = 300;
-
+// Effect strength (400/300) lives on each building's registry entry in
+// customBuildings.js, not duplicated here.
 var handleCoverageBuilding = function(censusStat, effect) {
   return function(map, x, y, simData) {
     simData.census[censusStat] += 1;
@@ -47,23 +46,27 @@ var handleDemandBuilding = function(censusStat) {
 };
 
 
-// Deliberately its own census field, distinct from the pre-existing (and unrelated)
-// census.hospitalPop the original auto-built hospital uses -- see the tileValues.ts
-// comment on CIVICHOSPITAL for why these are two separate features. Sharing the field
-// would incorrectly feed this building's count into the auto-hospital's own
-// needHospital/eval-score logic.
-var civicHospitalFound = handleCoverageBuilding('civicHospitalPop', HOSPITAL_LAND_VALUE_EFFECT);
-var libraryFound = handleCoverageBuilding('libraryPop', LIBRARY_LAND_VALUE_EFFECT);
-var schoolFound = handleDemandBuilding('schoolPop');
-var casinoFound = handleDemandBuilding('casinoPop');
+// civicHospitalPop is deliberately its own census field, distinct from the
+// pre-existing (and unrelated) census.hospitalPop the original auto-built hospital
+// uses (see makeHospital in residential.js) -- sharing the field would incorrectly
+// feed this building's count into the auto-hospital's own needHospital/eval-score
+// logic. Dispatches generically on each registry entry's effect.type instead of one
+// hand-written handler per building.
+var buildingHandlers = CUSTOM_BUILDINGS.map(function(building) {
+  var effect = building.effect;
+  var handler = effect.type === 'coverage'
+    ? handleCoverageBuilding(effect.censusStat, effect.landValueEffect)
+    : handleDemandBuilding(effect.censusStat);
+
+  return { centreTile: building.centreTile, handler: handler };
+});
 
 
 var CivicBuildings = {
   registerHandlers: function(mapScanner, repairManager) {
-    mapScanner.addAction(CIVICHOSPITAL, civicHospitalFound);
-    mapScanner.addAction(LIBRARY, libraryFound);
-    mapScanner.addAction(SCHOOL, schoolFound);
-    mapScanner.addAction(CASINO, casinoFound);
+    buildingHandlers.forEach(function(entry) {
+      mapScanner.addAction(entry.centreTile, entry.handler);
+    });
   }
 };
 

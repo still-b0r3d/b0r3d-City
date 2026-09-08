@@ -11,12 +11,11 @@
  *
  */
 
-import { TILE_COUNT } from "./tileValues.ts";
-
-// Tiles must be 16px square
+// Tiles must be 16px square. The sheet itself no longer has to be square, or have a
+// perfect-square tile count -- tile geometry is derived from the loaded image's own
+// pixel dimensions in _verifyImage below, so growing the tileset is just appending more
+// 16px-tall rows to the bottom of the image, in any quantity.
 var TILE_SIZE = 16;
-var TILES_PER_ROW = Math.sqrt(TILE_COUNT);
-var ACCEPTABLE_DIMENSION = TILES_PER_ROW * TILE_SIZE;
 
 
 function TileSet(image, callback, errorCallback) {
@@ -46,14 +45,16 @@ TileSet.prototype._verifyImage = function(image, callback, errorCallback) {
   var width = image.width;
   var height = image.height;
 
-  // We expect tilesets to be square, and of the required width/height
-  if (width !== height || width !== ACCEPTABLE_DIMENSION) {
+  // We expect the sheet's width and height to each be an exact multiple of the tile
+  // size -- no longer required to be square or a perfect-square tile count.
+  if (width % TILE_SIZE !== 0 || height % TILE_SIZE !== 0) {
     // Spin the event loop
     window.setTimeout(errorCallback, 0);
     return;
   }
 
   var tileWidth = this.tileWidth = TILE_SIZE;
+  var TILES_PER_ROW = width / TILE_SIZE;
 
   // We paint the image onto a canvas so we can split it up
   var c = document.createElement('canvas');
@@ -62,7 +63,7 @@ TileSet.prototype._verifyImage = function(image, callback, errorCallback) {
   var cx = c.getContext('2d');
 
   // Count how many tiles we have created
-  var tileCount = TILE_COUNT;
+  var tileCount = TILES_PER_ROW * (height / TILE_SIZE);
   var notifications = 0;
   var self = this;
 

@@ -737,18 +737,15 @@ nav li {
   color: white;
 }
 
-/* Tool buttons */
+/* Tool buttons. b0r3d-city's custom buildings (Hospital/School/Casino/Library, etc.)
+   aren't listed here -- their colours are set inline from src/customBuildings.js when
+   game.js renders their buttons, not via a per-ID rule. */
 #airportButton {
   background-color: violet;
 }
 
 #bulldozerButton {
   background-color: salmon;
-}
-
-#casinoButton {
-  background-color: purple;
-  color: white;
 }
 
 #coalButton {
@@ -764,16 +761,8 @@ nav li {
   background-color: red;
 }
 
-#hospitalButton {
-  background-color: lightblue;
-}
-
 #industrialButton {
   background-color: yellow;
-}
-
-#libraryButton {
-  background-color: tan;
 }
 
 #nuclearButton {
@@ -811,10 +800,6 @@ nav li {
 #roadButton {
   background-color: black;
   color: white;
-}
-
-#schoolButton {
-  background-color: orange;
 }
 
 #stadiumButton {

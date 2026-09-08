@@ -126,6 +126,25 @@ var deleteSave = function(id) {
 };
 
 
+// 2026-09-08: tileFlags.ts moved the 6 status-flag bits from bits 10-15 up to bits
+// 13-18, to raise the tile-value ceiling from 1024 to 8192 (see tileFlags.ts's
+// BIT_START for why). Saves store each cell's *raw* packed value-plus-flags integer
+// (see GameMap.save/load), with zero awareness of bit layout here in storage.js -- so a
+// v3 save's raw values must be reflowed from the old layout to the new one, or they'll
+// silently decode wrong (flag bits landing on what are now different tile-value bits,
+// and vice versa) instead of failing loudly. Old-layout constants are inlined here
+// (not imported from tileFlags.ts) since those live constants now mean the new layout.
+var OLD_VALUE_MASK = 0x3FF;   // old bits 0-9
+var OLD_FLAGS_MASK = 0xFC00;  // old bits 10-15
+var OLD_TO_NEW_FLAG_SHIFT = 3; // flags moved from bit 10 up to bit 13
+
+var reflowTileValue = function(oldRaw) {
+  var value = oldRaw & OLD_VALUE_MASK;
+  var flags = (oldRaw & OLD_FLAGS_MASK) << OLD_TO_NEW_FLAG_SHIFT;
+  return value | flags;
+};
+
+
 var transitionOldSave = function(savedGame) {
   switch (savedGame.version) {
     case 1:
@@ -137,6 +156,12 @@ var transitionOldSave = function(savedGame) {
       savedGame.pollutionMaxY = Math.floor(savedGame.height / 2);
       savedGame.cityCentreX = Math.floor(savedGame.width / 2);
       savedGame.cityCentreY = Math.floor(savedGame.height / 2);
+
+      break;
+
+    case 3:
+      for (var i = 0, l = savedGame.map.length; i < l; i++)
+        savedGame.map[i].value = reflowTileValue(savedGame.map[i].value);
 
       break;
 
@@ -156,7 +181,7 @@ var Storage = {
 };
 
 
-Object.defineProperty(Storage, 'CURRENT_VERSION', MiscUtils.makeConstantDescriptor(3));
+Object.defineProperty(Storage, 'CURRENT_VERSION', MiscUtils.makeConstantDescriptor(4));
 Object.defineProperty(Storage, 'LEGACY_KEY', MiscUtils.makeConstantDescriptor('micropolisJSGame'));
 Object.defineProperty(Storage, 'KEY_PREFIX', MiscUtils.makeConstantDescriptor('micropolisJSGame_'));
 Object.defineProperty(Storage, 'INDEX_KEY', MiscUtils.makeConstantDescriptor('micropolisJSSaveIndex'));

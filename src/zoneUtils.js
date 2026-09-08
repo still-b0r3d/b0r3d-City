@@ -13,7 +13,12 @@
 
 import { MiscUtils } from './miscUtils.js';
 import { BULLBIT, POWERBIT } from "./tileFlags.ts";
+import { CUSTOM_BUILDINGS } from "./customBuildings.js";
 import * as TileValues from "./tileValues.ts";
+
+// Casino's centre tile isn't a named TileValues constant -- its ID is computed by
+// customBuildings.js, see that file for why.
+var CASINO_CENTRE = CUSTOM_BUILDINGS.filter(function(b) { return b.id === 'casino'; })[0].centreTile;
 
 var checkBigZone = function(tileValue) {
   var result;
@@ -24,7 +29,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT:
     case TileValues.NUCLEAR:
     case TileValues.STADIUM:
-    case TileValues.CASINO:
+    case CASINO_CENTRE:
       result = {zoneSize: 4, deltaX: 0, deltaY: 0};
       break;
 
@@ -35,7 +40,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 1:
     case TileValues.NUCLEAR + 1:
     case TileValues.STADIUM + 1:
-    case TileValues.CASINO + 1:
+    case CASINO_CENTRE + 1:
       result = {zoneSize: 4, deltaX: -1, deltaY: 0};
       break;
 
@@ -43,7 +48,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 4:
     case TileValues.NUCLEAR + 4:
     case TileValues.STADIUM + 4:
-    case TileValues.CASINO + 4:
+    case CASINO_CENTRE + 4:
       result = {zoneSize: 4, deltaX: 0, deltaY: -1};
       break;
 
@@ -51,7 +56,7 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 5:
     case TileValues.NUCLEAR + 5:
     case TileValues.STADIUM + 5:
-    case TileValues.CASINO + 5:
+    case CASINO_CENTRE + 5:
       result = {zoneSize: 4, deltaX: -1, deltaY: -1};
       break;
 
@@ -128,19 +133,29 @@ var checkBigZone = function(tileValue) {
 };
 
 
+// Custom buildings' base/last tile ranges, grouped by footprint size, generated once
+// from the registry instead of one hand-added OR-chain term per building.
+var customRangesBySize = {};
+CUSTOM_BUILDINGS.forEach(function(building) {
+  var ranges = customRangesBySize[building.size] || (customRangesBySize[building.size] = []);
+  ranges.push([building.baseTile, building.lastTile]);
+});
+
+var isInAnyRange = function(tileValue, ranges) {
+  return ranges.some(function(range) { return tileValue >= range[0] && tileValue <= range[1]; });
+};
+
 var checkZoneSize = function(tileValue) {
   if ((tileValue >= TileValues.RESBASE - 1        && tileValue <= TileValues.PORTBASE - 1) ||
       (tileValue >= TileValues.LASTPOWERPLANT + 1 && tileValue <= TileValues.POLICESTATION + 4) ||
-      (tileValue >= TileValues.CIVICHOSPITALBASE && tileValue <= TileValues.LASTCIVICHOSPITAL) ||
-      (tileValue >= TileValues.SCHOOLBASE && tileValue <= TileValues.LASTSCHOOL) ||
-      (tileValue >= TileValues.LIBRARYBASE && tileValue <= TileValues.LASTLIBRARY)) {
+      isInAnyRange(tileValue, customRangesBySize[3] || [])) {
     return 3;
   }
 
   if ((tileValue >= TileValues.PORTBASE    && tileValue <= TileValues.LASTPORT) ||
       (tileValue >= TileValues.COALBASE    && tileValue <= TileValues.LASTPOWERPLANT) ||
       (tileValue >= TileValues.STADIUMBASE && tileValue <= TileValues.LASTZONE) ||
-      (tileValue >= TileValues.CASINOBASE  && tileValue <= TileValues.LASTCASINO)) {
+      isInAnyRange(tileValue, customRangesBySize[4] || [])) {
     return 4;
   }
 

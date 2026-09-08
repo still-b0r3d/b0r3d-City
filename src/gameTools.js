@@ -13,6 +13,7 @@
 
 import { BuildingTool } from './buildingTool.js';
 import { BulldozerTool } from './bulldozerTool.js';
+import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { EventEmitter } from './eventEmitter.js';
 import { QUERY_WINDOW_NEEDED } from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
@@ -27,13 +28,10 @@ function GameTools(map) {
   var tools = EventEmitter({
     airport: new BuildingTool(10000, TileValues.AIRPORT, map, 6, false),
     bulldozer: new BulldozerTool(map),
-    casino: new BuildingTool(5000, TileValues.CASINO, map, 4, false),
     coal: new BuildingTool(3000, TileValues.POWERPLANT, map, 4, false),
     commercial: new BuildingTool(100, TileValues.COMCLR, map, 3, false),
     fire: new BuildingTool(500, TileValues.FIRESTATION, map, 3, false),
-    hospital: new BuildingTool(1000, TileValues.CIVICHOSPITAL, map, 3, false),
     industrial: new BuildingTool(100, TileValues.INDCLR, map, 3, false),
-    library: new BuildingTool(1000, TileValues.LIBRARY, map, 3, false),
     nuclear: new BuildingTool(5000, TileValues.NUCLEAR, map, 4, true),
     park: new ParkTool(map),
     police: new BuildingTool(500, TileValues.POLICESTATION, map, 3, false),
@@ -42,9 +40,12 @@ function GameTools(map) {
     residential: new BuildingTool(100, TileValues.FREEZ, map, 3, false),
     road: new RoadTool(map),
     query: new QueryTool(map),
-    school: new BuildingTool(800, TileValues.SCHOOL, map, 3, false),
     stadium: new BuildingTool(5000, TileValues.STADIUM, map, 4, false),
     wire: new WireTool(map),
+  });
+
+  CUSTOM_BUILDINGS.forEach(function(building) {
+    tools[building.id] = new BuildingTool(building.cost, building.centreTile, map, building.size, building.animated);
   });
 
   tools.query.addEventListener(QUERY_WINDOW_NEEDED, MiscUtils.reflectEvent.bind(tools, QUERY_WINDOW_NEEDED));

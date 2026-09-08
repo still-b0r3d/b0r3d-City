@@ -124,7 +124,10 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.mouseUpHandler = mouseUpHandler.bind(this);
   this.canvasClickHandler = canvasClickHandler.bind(this);
 
-  $('.toolButton').click(toolButtonHandler.bind(this));
+  // Delegated (not bound directly to each button) since game.js renders the custom
+  // buildings' toolButtons into #buttons at runtime, after this constructor may already
+  // have run -- a direct .click() binding here would never see those.
+  $('#buttons').on('click', '.toolButton', toolButtonHandler.bind(this));
   $('#budgetRequest').click(budgetHandler.bind(this));
   $('#evalRequest').click(evalHandler.bind(this));
   $('#disasterRequest').click(disasterHandler.bind(this));

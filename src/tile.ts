@@ -12,7 +12,7 @@
 */
 
 import * as TileFlags from "./tileFlags";
-import { DIRT, TILE_COUNT, TILE_INVALID } from "./tileValues";
+import { DIRT, TILE_INVALID } from "./tileValues";
 
 // I think I want to change this soon. Most of the tile properties, (e.g. whether
 // it is a zone, population, conductiveness, pollution emitted) are completely defined
@@ -177,7 +177,10 @@ export class Tile {
   }
 
   private valueIsInvalid(value: number): boolean {
-    return value < TILE_INVALID || value >= TILE_COUNT;
+    // The real ceiling is bit-packing headroom (a tile value must stay below the first
+    // flag bit), not how many tiles happen to have art loaded in the tileset image --
+    // those are independent concerns, see tileSet.js and tileFlags.ts.
+    return value < TILE_INVALID || value >= TileFlags.BIT_START;
   }
 
   private flagsAreInvalid(flags: number): boolean {

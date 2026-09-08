@@ -17,6 +17,7 @@ import { BaseTool } from './baseTool.js';
 import { BudgetWindow } from './budgetWindow.js';
 import { Config } from './config.js';
 import { CongratsWindow } from './congratsWindow.js';
+import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { DebugWindow } from './debugWindow.js';
 import { DisasterWindow } from './disasterWindow.js';
 import { EvaluationWindow } from './evaluationWindow.js';
@@ -43,6 +44,38 @@ import { Text } from './text.js';
 import { TouchWarnWindow } from './touchWarnWindow.js';
 
 var disasterTimeout = 20 * 1000;
+
+
+// b0r3d-city's own buildings (Hospital/School/Casino/Library, and any future
+// customBuildings.js entries) aren't hand-authored in index.html -- one toolButton is
+// rendered here per registry entry instead, colour set inline rather than via a
+// per-ID CSS rule (see customBuildings.js and css/style.css's "Tool buttons" comment).
+var renderCustomBuildingButtons = function() {
+  var buttons = $('#buttons');
+
+  CUSTOM_BUILDINGS.forEach(function(building) {
+    // Idempotent: Game() can in principle run more than once per page load (load a
+    // second save, start a new game after one already ran), and #buttons is never
+    // cleared between them -- skip a building whose button is already there rather
+    // than appending a duplicate.
+    if ($('#' + building.id + 'Button').length > 0)
+      return;
+
+    var button = $('<button>')
+      .attr('id', building.id + 'Button')
+      .attr('data-size', building.size)
+      .attr('data-tool', building.id)
+      .attr('data-colour', building.colour)
+      .addClass('toolButton unselected')
+      .text(building.label + ' $' + building.cost)
+      .css('background-color', building.colour);
+
+    if (building.textColour)
+      button.css('color', building.textColour);
+
+    buttons.append(button);
+  });
+};
 
 
 function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
@@ -97,6 +130,7 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // Note: must init canvas before inputStatus
   this.gameCanvas = new GameCanvas('canvasContainer');
   this.gameCanvas.init(this.gameMap, this.tileSet, spriteSheet);
+  renderCustomBuildingButtons();
   this.inputStatus = new InputStatus(this.gameMap, this.gameCanvas);
 
   // Every currently-open dialog/window instance (BudgetWindow, EvaluationWindow,

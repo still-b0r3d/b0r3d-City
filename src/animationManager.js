@@ -11,9 +11,9 @@
  *
  */
 
-import { ANIMBIT, BIT_MASK, POWERBIT, ZONEBIT } from './tileFlags.ts';
+import { ANIMBIT, BIT_MASK, BIT_START, POWERBIT, ZONEBIT } from './tileFlags.ts';
 import { TileHistory } from './tileHistory.js';
-import { LASTTINYEXP, LIGHTNINGBOLT, TILE_COUNT, TILE_INVALID } from "./tileValues.ts";
+import { LASTTINYEXP, LIGHTNINGBOLT, TILE_INVALID } from "./tileValues.ts";
 import { TileUtils } from './tileUtils.js';
 
 
@@ -43,8 +43,10 @@ function AnimationManager(map, animationPeriod, blinkPeriod) {
 
 AnimationManager.prototype.initArray = function() {
   // Map all tiles to their own value in case we ever
-  // look up a tile that is not animated
-  for (var i = 0; i < TILE_COUNT; i++)
+  // look up a tile that is not animated. Sized to the full legal tile-value range
+  // (BIT_START, see tileFlags.ts), not just however many tiles currently have art --
+  // that way any future custom building's tile IDs are covered automatically.
+  for (var i = 0; i < BIT_START; i++)
     this._data[i] = i;
 };
 

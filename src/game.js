@@ -238,6 +238,9 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // Listen for clicks on the save button
   this.inputStatus.addEventListener(Messages.SAVE_REQUESTED, this.handleSave.bind(this));
 
+  // ... and the one that abandons the city and goes back to the splash screen
+  this.inputStatus.addEventListener(Messages.MAIN_MENU_REQUESTED, this.handleMainMenuRequest.bind(this));
+
   // Listen for front end messages
   this.simulation.addEventListener(Messages.FRONT_END_MESSAGE, this.processFrontEndMessage.bind(this));
 
@@ -337,6 +340,43 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   this.animate = animate.bind(this);
   this.animate();
 }
+
+
+// Back to the splash screen. This reloads the page rather than tearing the running
+// game down and constructing a fresh SplashScreen, because there is nothing here to
+// tear it down with: tick() reschedules itself through setTimeout and animate()
+// through requestAnimationFrame, neither with a stop condition; InputStatus binds
+// document-level listeners; and every Panel registers document mousemove/mouseup
+// handlers plus a matchMedia listener and appends itself to a module-global array
+// that panel.js documents as never needing pruning because panels are never
+// destroyed. Roughly sixteen Panels and twelve windows per game, none of them
+// unregisterable. Reload sidesteps all of it.
+//
+// The player loses nothing a soft reset would have kept, either -- the city is
+// discarded either way, and saves live in localStorage -- so the only real cost is
+// re-reading the tile sheets, which come from cache. A proper Game.destroy() is
+// worth having for its own sake (see TODO.md); this does not depend on it.
+Game.prototype.handleMainMenuRequest = function() {
+  // Pausing first so the city is not still growing, catching fire or running up a
+  // budget behind a dialog the player might sit on for a while. Harmless if they
+  // cancel: they can unpause with the same button they always could.
+  //
+  // Through handlePause rather than simulation.setSpeed directly -- that method also
+  // owns this.isPaused (which the animation loop reads) and the Pause/Play button
+  // label, and setting the speed behind its back is exactly the dishonest-button bug
+  // its own comment warns about. scenarioController.js pauses the same way.
+  if (!this.isPaused)
+    this.handlePause();
+
+  var message = 'Leave this city and go back to the main menu?';
+  if (Storage.canStore)
+    message += '\n\nAnything you have not saved will be lost.';
+
+  if (!window.confirm(message))
+    return;
+
+  window.location.reload();
+};
 
 
 Game.prototype.save = function(saveName) {

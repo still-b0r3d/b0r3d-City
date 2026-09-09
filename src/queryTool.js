@@ -15,6 +15,7 @@ import $ from "jquery";
 
 import { BaseTool } from './baseTool.js';
 import { Config } from './config.js';
+import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { EventEmitter } from './eventEmitter.js';
 import { QUERY_WINDOW_NEEDED } from './messages.ts';
 import { Text } from './text.js';
@@ -97,7 +98,30 @@ QueryTool.prototype.classifyDebug = function(x, y, blockMaps) {
 };
 
 
+// b0r3d-city's own buildings occupy tile IDs past the end of the original engine's
+// range, and so past the end of classifyZone's baseTiles/Text.zoneTypes tables below.
+// That loop has no "not found" case -- it just runs to the end -- so every one of them
+// used to be reported as whatever the last entry happens to be, which is the original
+// tileset's "Ur 238" joke. Answered straight from the registry instead, so a new
+// building added there is named correctly here without touching either table.
+var customBuildingAt = function(tileValue) {
+  for (var i = 0, l = CUSTOM_BUILDINGS.length; i < l; i++) {
+    var building = CUSTOM_BUILDINGS[i];
+    if (tileValue >= building.baseTile && tileValue <= building.lastTile)
+      return building;
+  }
+
+  return null;
+};
+
+
 QueryTool.prototype.classifyZone = function(x, y) {
+  var customBuilding = customBuildingAt(this._map.getTileValue(x, y));
+  if (customBuilding !== null) {
+    $('#queryZoneType').text(customBuilding.label);
+    return;
+  }
+
   var baseTiles = [
       TileValues.DIRT, TileValues.RIVER, TileValues.TREEBASE, TileValues.RUBBLE,
       TileValues.FLOOD, TileValues.RADTILE, TileValues.FIRE, TileValues.ROADBASE,

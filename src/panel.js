@@ -142,6 +142,11 @@ Panel.prototype._unfloat = function() {
 Panel.prototype.focus = function() {
   topZIndex += 1;
   this._el.css('z-index', topZIndex);
+
+  // Opening is the first moment a modal window is measurable (they're display:none
+  // until then, which _keepOnScreen can't work with), so it's also the first chance
+  // to catch one whose remembered position came from a wider window than this one.
+  this._keepOnScreen();
 };
 
 
@@ -239,7 +244,21 @@ Panel.prototype._endDrag = function() {
 };
 
 
+// Pulls this panel back inside the viewport if any of it has ended up outside. The
+// only handle a panel offers is its own header, so a panel that ends up fully
+// off-screen can't be dragged back -- and with #controls (the entire build toolbar)
+// among them, that leaves a player with no way to build and nothing to click. It's
+// easy to reach, too: a panel's default position is worked out once, from the window
+// width at the time, and a remembered one can be from a session at any width at all,
+// so simply making the window narrower is enough to strand one.
 Panel.prototype._keepOnScreen = function() {
+  // offsetWidth/Height read 0 while a panel is hidden -- every modal window starts
+  // that way, and the sidebar panels are .initialHidden until the game reveals them
+  // -- which would clamp against a zero-sized box and park them somewhere no more
+  // useful. focus() and Game's reveal both re-run this once they're measurable.
+  if (!isDesktop() || !this._el.is(':visible'))
+    return;
+
   var el = this._el[0];
   var offset = this._el.offset();
   var maxLeft = Math.max(0, window.innerWidth - el.offsetWidth);
@@ -250,6 +269,28 @@ Panel.prototype._keepOnScreen = function() {
     top: MiscUtils.clamp(offset.top, 0, maxTop)
   });
 };
+
+
+// Every panel at once. Bound to window resize below (the case that strands a panel in
+// the first place) and called by Game once it un-hides the sidebar panels, which is
+// when a remembered-from-a-wider-window position first becomes measurable.
+Panel.keepAllOnScreen = function() {
+  for (var i = 0; i < allPanels.length; i++)
+    allPanels[i]._keepOnScreen();
+};
+
+
+// Debounced rather than run per event: dragging a window's edge fires resize
+// continuously, and each pass reads back every visible panel's geometry. A timer
+// rather than requestAnimationFrame, which doesn't run at all while the page is
+// hidden -- a resize arriving in a backgrounded tab would leave a coalescing flag set
+// with no frame ever coming to clear it, silently disabling this listener for the rest
+// of the session.
+var clampTimer = null;
+window.addEventListener('resize', function() {
+  window.clearTimeout(clampTimer);
+  clampTimer = window.setTimeout(Panel.keepAllOnScreen, 100);
+});
 
 
 Panel.prototype._startResize = function(e) {

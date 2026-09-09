@@ -87,6 +87,25 @@ var tileSetError = function() {
 };
 
 
+// #wrapper (everything below the header: the splash screen, then the map) is
+// absolutely positioned, so it has to be told how far down to start rather than simply
+// following the header. Publishing the header's real height as a custom property is
+// what lets css/style.css stop guessing at it per breakpoint -- see the comment on
+// #wrapper there for what the guesses cost. Re-run on resize (the header wraps to a
+// second row on a narrow enough phone) and once webfonts land, since the title is set
+// in one and the header sizes to it.
+var syncHeaderHeight = function() {
+  var header = document.getElementById('header');
+  if (header)
+    document.documentElement.style.setProperty('--headerHeight', header.offsetHeight + 'px');
+};
+
+syncHeaderHeight();
+window.addEventListener('resize', syncHeaderHeight);
+if (document.fonts && document.fonts.ready)
+  document.fonts.ready.then(syncHeaderHeight);
+
+
 // Check for debug parameter in URL
 Config.debug = window.location.search.slice(1).split('&').some(function(param) {
   return param.trim().toLowerCase() === 'debug=1';

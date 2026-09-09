@@ -21,9 +21,12 @@ var clamp = function(value, min, max) {
 };
 
 
+// `writeable` was a misspelling of `writable`, so the property was ignored entirely --
+// harmless in practice only because Object.defineProperty already defaults writable to
+// false, which is what was meant. Spelled correctly the intent is now actually stated.
 var makeConstantDescriptor = function(value) {
   return {configurable: false, enumerable: false,
-          writeable: false, value: value};
+          writable: false, value: value};
 };
 
 

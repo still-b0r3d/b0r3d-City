@@ -16,6 +16,7 @@ import $ from "jquery";
 import { Config } from './config.js';
 import { Game } from './game.js';
 import { GameMap } from './gameMap.js';
+import { reflowTileValue } from './legacyTileFormat.js';
 import { MapGenerator } from './mapGenerator.js';
 import { MiscUtils } from './miscUtils.js';
 import { SCENARIOS } from './scenarios.js';
@@ -51,12 +52,16 @@ var SCENARIO_CITIES = [
 var onresize = null;
 
 
-// If the window is initially too small, try and relaunch if it gets bigger
-var makeResizeListener = function(tileSet, spriteSheet) {
-  return function(tileSet, spriteSheet, e) {
+// If the window is initially too small, try and relaunch if it gets bigger.
+// All three arguments have to be carried through: this used to pass only two, so the
+// sprite sheet arrived as snowTileSet and the relaunched splash screen got `undefined`
+// for its sprites -- meaning the recovery path built a game that couldn't draw a single
+// sprite, which is worse than the too-small screen it was recovering from.
+var makeResizeListener = function(tileSet, snowTileSet, spriteSheet) {
+  return function(e) {
     $(window).off('resize');
-    var s = new SplashScreen(tileSet, spriteSheet);
-  }.bind(null, tileSet, spriteSheet);
+    var s = new SplashScreen(tileSet, snowTileSet, spriteSheet);
+  };
 };
 
 
@@ -64,7 +69,7 @@ function SplashScreen(tileSet, snowTileSet, spriteSheet) {
   // We don't launch the game if the screen is too small, however, we should retain the right to do so
   // should the situation change...
   if ($('#tooSmall').is(':visible')) {
-    onresize = makeResizeListener(tileSet, spriteSheet);
+    onresize = makeResizeListener(tileSet, snowTileSet, spriteSheet);
     $(window).on('resize', onresize);
     return;
   }
@@ -210,6 +215,14 @@ var hideScenarioList = function(e) {
 // GameMap from it. Shared by freeform Classic Cities and full Scenario mode
 // below -- both start from the same map data, they just differ in what
 // happens after the map is handed off.
+//
+// Those files hold raw packed tile values straight out of the original .cty binaries
+// (see scripts/convert-scenario-cities.mjs), so they are permanently in the classic
+// bit layout and have to be reflowed to the current one on the way in -- exactly as
+// storage.js does for pre-2026-09-08 saves, and for the same reason. Without it 42%
+// of a city's tiles silently decode as some other tile, and the map scan walks off
+// the end of a zone-offset table on the first industrial zone it meets, taking the
+// whole game down before it ever paints a frame.
 var loadCityMap = function(slug) {
   return fetch('scenarioCities/' + slug + '.json')
     .then(function(response) {
@@ -220,7 +233,7 @@ var loadCityMap = function(slug) {
     .then(function(data) {
       var map = new GameMap(data.width, data.height);
       for (var i = 0, l = data.map.length; i < l; i++)
-        map.setTileValue(i % data.width, Math.floor(i / data.width), data.map[i]);
+        map.setTileValue(i % data.width, Math.floor(i / data.width), reflowTileValue(data.map[i]));
       return map;
     });
 };

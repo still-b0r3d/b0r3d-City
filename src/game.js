@@ -259,8 +259,11 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   this._notificationBar = new Notification('#notifications', this.gameCanvas, Text.messageText[Messages.WELCOME]);
 
-  // Track when various milestones are first reached
-  this._reachedTown = this._reachedCity = this._reachedCapital = this._reachedMetropolis = this._reacedMegalopolis = false;
+  // Track when various milestones are first reached. A city that arrives already at
+  // one of these sizes doesn't trip them on arrival -- the simulation seeds its own
+  // growth baseline from the real starting population so it never reports the
+  // milestone in the first place (see Simulation's _seedGrowthBaseline).
+  this._reachedTown = this._reachedCity = this._reachedCapital = this._reachedMetropolis = this._reachedMegalopolis = false;
   this.congratsWindow = new CongratsWindow(opacityLayerID, 'congratsWindow');
   this.congratsWindow.addEventListener(Messages.CONGRATS_WINDOW_CLOSED, this._makeGenericCloseHandler(this.congratsWindow));
 
@@ -337,16 +340,27 @@ Game.prototype.save = function(saveName) {
     date: this.simulation.getDate()
   };
 
-  var id = Storage.saveGame(saveName, saveData, meta);
+  var result = Storage.saveGame(saveName, saveData, meta);
 
-  // saveGame refuses a brand-new slot once MAX_SAVES is already reached --
-  // normally caught by saveWindow.js's own pre-check before this ever runs,
-  // but that check and this write are two separate localStorage reads, so a
-  // save from another tab in between can still let a doomed save through.
-  // The save dialog has already closed by this point, so an alert is the
-  // only way left to tell the player nothing was actually written.
-  if (id === null)
-    window.alert('Save failed: you already have ' + Storage.MAX_SAVES + ' saves. Delete one, then try again.');
+  // The save dialog has already closed by this point, so an alert is the only way
+  // left to tell the player nothing was actually written -- and a save the player
+  // asked for silently not happening is worth interrupting them about.
+  //
+  // 'cap': saveGame refuses a brand-new slot once MAX_SAVES is already reached.
+  // Normally caught by saveWindow.js's own pre-check before this ever runs, but that
+  // check and this write are two separate localStorage reads, so a save from another
+  // tab in between can still let a doomed save through.
+  //
+  // 'storage': the browser refused the write outright -- out of quota (a city is a
+  // large blob, and this origin's allowance is shared with the rest of b0r3d.org) or
+  // site data blocked. Nothing pre-checks this one, and it used to throw straight
+  // out of here, leaving the player believing they'd saved.
+  if (!result.ok) {
+    window.alert(result.reason === 'cap' ?
+      'Save failed: you already have ' + Storage.MAX_SAVES + ' saves. Delete one, then try again.' :
+      "Save failed: this browser wouldn't store the save. It may be out of space (try deleting " +
+        'a save) or set to block site data for this page.');
+  }
 };
 
 
@@ -370,6 +384,12 @@ Game.prototype.revealControls = function() {
  $('.initialHidden').each(function(e) {
    $(this).removeClass('initialHidden');
  });
+
+ // The sidebar panels only become measurable here, which is the first point a
+ // position remembered from a wider window can be checked against this one -- without
+ // it, a toolbar saved off to the right in a maximised session comes back completely
+ // off-screen, with no header left to drag it home by.
+ Panel.keepAllOnScreen();
 
  this._notificationBar.news({subject: Messages.WELCOME});
  this.rci.update({residential: 750, commercial: 750, industrial: 750});
@@ -792,6 +812,13 @@ Game.prototype.handlePause = function() {
     this.simulation.setSpeed(Simulation.SPEED_PAUSED);
   else
     this.simulation.setSpeed(this.defaultSpeed);
+
+  // The button's label is derived from the real paused state here, rather than
+  // toggled inside inputStatus.js's click handler, so that it stays honest when
+  // something other than a click pauses the game -- scenarioController.js pauses on
+  // win/lose, which used to leave the button still reading "Pause" over an already
+  // paused city, and one more click to "resume" would pause it a second time.
+  $('#pauseRequest').text(this.isPaused ? 'Play' : 'Pause');
 };
 
 
@@ -837,6 +864,12 @@ Game.prototype.handleInput = function() {
   }
 
   if (this.inputStatus.escape) {
+    // Consumed here rather than left set until the key comes back up: handleInput
+    // runs on every tick, so a single ordinary Escape press used to close every open
+    // window in turn (and then clear the tool) instead of just the topmost one.
+    // InputStatus re-arms it on the next fresh press, not on auto-repeat.
+    this.inputStatus.escape = false;
+
     // We need to handle escape, as InputStatus won't know what dialogs are showing.
     // Closes whichever window is topmost -- its own close() fires the *_CLOSED
     // event that's wired to _deregisterWindow (directly or via

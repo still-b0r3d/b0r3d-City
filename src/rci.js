@@ -91,8 +91,13 @@ RCI.prototype._drawRect = function(ctx) {
 
 
 RCI.prototype._drawValue = function(ctx, index, value) {
-  // Need to scale com and ind
-  if (index > 1)
+  // Need to scale com and ind. The bar height is measured against residential's own
+  // +/-2000 valve range (see _scale), but commercial and industrial only run to
+  // +/-1500, so both need bringing onto the same scale or they read low. This said
+  // `index > 1`, which caught industrial but not commercial -- so the C bar has been
+  // drawing 25% short of the demand it represents, and topping out at three quarters
+  // height when commercial demand is actually maxed.
+  if (index >= 1)
     value = Math.floor(2000/1500 * value);
 
   var colours = ['rgb(0,255,0)', 'rgb(0, 0, 139)', 'rgb(255, 255, 0)'];

@@ -180,6 +180,12 @@ Simulation.prototype.load = function(saveData) {
   this._valves.load(saveData);
   this.budget.load(saveData);
   this._census.load(saveData);
+
+  // The save's own population, not a rescan: init() already seeded a baseline from
+  // the blank map this Simulation was built around (Game hands us an empty GameMap
+  // and fills it from the save afterwards), so without this the loaded city would
+  // still be measured against an empty one. See _seedGrowthBaseline.
+  this._seedGrowthBaseline(this.evaluation.cityPop);
 };
 
 
@@ -308,6 +314,26 @@ Simulation.prototype.init = function() {
   BlockMapUtils.crimeScan(this._census, this.blockMaps);
   BlockMapUtils.populationDensityScan(this._map, this.blockMaps);
   BlockMapUtils.fireAnalysis(this.blockMaps);
+
+  this._seedGrowthBaseline(this.evaluation.getPopulation(this._census));
+};
+
+
+// _checkGrowth announces a new city class by comparing this tick's population against
+// the last one it saw, so whatever those start at is implicitly a claim about the city
+// the player was handed. Left at zero -- an empty village -- the very first growth
+// check on any city that arrives already built (every Classic City, every Scenario,
+// every loaded save) reads as an instant leap from nothing to whatever size it really
+// is, and congratulates the player on "reaching" a population they were given. Seeded
+// from the real starting population instead, by init() once the opening map scan has
+// filled the census, and again by load() once a save's own figures are back.
+Simulation.prototype._seedGrowthBaseline = function(startingPopulation) {
+  this._cityPopLast = startingPopulation;
+
+  // Brings cityClass/cityClassLast up to match, so the first growth check compares
+  // like with like -- and so the info bar opens on the city's real classification
+  // rather than showing VILLAGE over a metropolis until the first evaluation lands.
+  this.evaluation.getCityClass(startingPopulation);
 };
 
 
@@ -648,7 +674,10 @@ Simulation.prototype._updateTime = function() {
   var cityMonth = Math.floor(this._cityTime % 48) >> 2;
 
   if (cityYear >= megalinium) {
-    this.setYear(startingYear);
+    // Was `this.setYear(startingYear)`: neither of those exists (the method is
+    // _setYear, and there is no bare `startingYear` binding in this module), so the
+    // one thing this branch was there to prevent would instead have thrown.
+    this._setYear(this._startingYear);
     return;
   }
 

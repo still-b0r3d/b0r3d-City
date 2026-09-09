@@ -64,7 +64,12 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.down = false;
   this.left = false;
   this.right = false;
+
+  // Read as a one-shot: Game clears it as soon as it acts on it (see handleInput),
+  // so _escapeHeld is what stops the OS's key auto-repeat re-arming it over and over
+  // while the key is simply being held down.
   this.escape = false;
+  this._escapeHeld = false;
 
   // Mouse movement
   this.mouseX = -1;
@@ -72,8 +77,8 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
 
   // Mouse drags
   this._dragging = false;
-  this._lastdragX = -1;
-  this._lastdragY = -1;
+  this._lastDragX = -1;
+  this._lastDragY = -1;
 
   // Touch panning (one-finger drag scrolls the camera when no draggable tool is active;
   // with two fingers down, pan tracks their midpoint instead of a single finger, so pan
@@ -149,7 +154,43 @@ var canvasID = '#' + GameCanvas.DEFAULT_ID;
 var toolOutputID = '#toolOutput';
 
 
+// True while the keystroke belongs to something the player is typing into rather than
+// to the game. These handlers are bound to the document, so they see every key pressed
+// anywhere on the page -- including inside a window's own fields.
+var isTypingTarget = function(target) {
+  if (!target)
+    return false;
+
+  var tag = target.tagName;
+  return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target.isContentEditable === true;
+};
+
+
 var keyDownHandler = function(e) {
+  // Escape is meaningful wherever it's pressed, a focused field included -- there it's
+  // the natural way to dismiss the dialog the field belongs to (Game closes the topmost
+  // window when it sees this).
+  if (e.keyCode === 27) {
+    // Only the first keydown of a press counts. Game treats this as a one-shot and
+    // clears it the moment it acts, so without this guard the OS's auto-repeat would
+    // keep re-arming it and a single held Escape would close every open window.
+    if (!this._escapeHeld) {
+      this._escapeHeld = true;
+      this.escape = true;
+    }
+
+    e.preventDefault();
+    return;
+  }
+
+  // Everything below is a camera-movement key, and those belong to the focused field
+  // whenever there is one: preventDefault() at the end doesn't merely stop the camera
+  // moving, it suppresses the keystroke outright. That meant W, A, S and D simply
+  // could not be typed into a save name or a set of high-score initials, and the arrow
+  // keys couldn't move the caret within one.
+  if (isTypingTarget(e.target))
+    return;
+
   var handled = false;
 
   switch (e.keyCode) {
@@ -176,10 +217,6 @@ var keyDownHandler = function(e) {
       this.left = true;
       handled = true;
       break;
-
-    case 27:
-      this.escape = true;
-      handled = true;
   }
 
   if (handled)
@@ -187,6 +224,9 @@ var keyDownHandler = function(e) {
 };
 
 
+// Deliberately not gated on isTypingTarget the way keyDownHandler is: a key held down
+// over the map and released after focus moved into a field still has to clear its flag,
+// or the camera would keep panning on its own.
 var keyUpHandler = function(e) {
   switch (e.keyCode) {
     case 38:
@@ -211,6 +251,7 @@ var keyUpHandler = function(e) {
 
     case 27:
       this.escape = false;
+      this._escapeHeld = false;
   }
 };
 
@@ -304,8 +345,10 @@ var mouseMoveHandler = function(e) {
 
 
 var canvasClickHandler = function(e) {
+  // `this._mouseY` here was a typo for `this.mouseY` -- there is no _mouseY, so that
+  // half of the "is the pointer actually over the map" check has never once been true.
   if (e.which !== 1 || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || this.mouseX === -1 ||
-     this._mouseY === -1 || this._dragging)
+     this.mouseY === -1 || this._dragging)
     return;
 
   this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
@@ -603,11 +646,11 @@ var toolButtonHandler = function(e) {
 };
 
 
+// Just reports the click. The button's label used to be flipped here too, which made
+// the label and the actual paused state two separate sources of truth that could (and
+// did) drift apart -- Game owns both now, and relabels from the real state.
 InputStatus.prototype.speedChangeHandler = function(e) {
-  var requestedSpeed = $('#pauseRequest').text();
-  var newRequest = requestedSpeed === 'Pause' ? 'Play' : 'Pause';
-  $('#pauseRequest').text(newRequest);
-  this._emitEvent(Messages.SPEED_CHANGE, requestedSpeed);
+  this._emitEvent(Messages.SPEED_CHANGE);
 };
 
 

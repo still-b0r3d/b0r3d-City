@@ -398,10 +398,12 @@ GameCanvas.prototype.tileToCanvasCoordinate = function(x, y) {
     x = x.x;
   }
 
+  // Was a bare `throw e` with no `e` anywhere in scope, so the one thing this guard
+  // reported was a ReferenceError about the guard itself.
   if (x === undefined || y === undefined || x < this.minX || y < this.minY ||
       x > (this.maxX + this._totalTilesInViewX - 1) ||
       y > (this.maxY + this._totalTilesInViewY - 1))
-    throw e;
+    throw new Error('GameCanvas tileToCanvasCoordinate called with out-of-bounds coordinates ' + x + ', ' + y);
 
   if (x < this._originX || x >= this._originX + this._totalTilesInViewX ||
       y < this._originY || y >= this._originY + this._totalTilesInViewY)
@@ -577,9 +579,17 @@ GameCanvas.prototype._paintOne = function(ctx, tileVal, x, y, w) {
   try {
     ctx.drawImage(src, x * w, y * w, w, w);
   } catch (e) {
+    // Exactly the reasoning _processSprites already carries: paint() is called from
+    // commonAnimate (game.js), which only schedules the next animation frame once
+    // paint() has returned, and nothing upstream catches. Letting one unpaintable
+    // tile escape therefore doesn't cost you that tile, it permanently freezes all
+    // rendering -- the simulation keeps running underneath, invisibly, forever.
+    // Mark the cell as void so the damage is visible and localised, and carry on.
     var mapX = this._originX + x;
     var mapY = this._originY + y;
-    throw new Error('Failed to draw tile ' + tileVal + ' at ' + x + ', ' + y + ' (map ' + mapX + ', ' + mapY + ' tile ' + (this._map.testBounds(mapX, mapY) ? this._map.getTileValue(mapX, mapY) : '?? (Out of bounds)') + ')');
+    console.warn('Failed to draw tile ' + tileVal + ' at ' + x + ', ' + y + ' (map ' + mapX + ', ' + mapY +
+                 ' tile ' + (this._map.testBounds(mapX, mapY) ? this._map.getTileValue(mapX, mapY) : '?? (Out of bounds)') + ')', e);
+    this._paintVoid(ctx, x, y, w);
   }
 };
 

@@ -701,9 +701,19 @@ nav li {
   margin: 0 auto;
 }
 
+/* Clears the header, which is a sibling rather than an ancestor, so this has to be a
+   length rather than something that follows automatically. It used to be a hardcoded
+   guess per breakpoint, and every guess was wrong somewhere: the header's real height
+   moves with the breakpoint, with whether the mobile drawer toggles are showing, and
+   with whether the title row wraps. At phone width the guess was ~24px short, so the
+   game canvas was painted over the bottom half of the Menu/Tools buttons -- and a tap
+   there landed on the map, placing a building instead of opening the drawer.
+   --headerHeight is the header's actual measured height, republished on resize and
+   after webfonts land (see syncHeaderHeight in src/micropolis.js); the fallback is
+   only for the instant before that first runs. */
 #wrapper {
   position: absolute;
-  top: 55px;
+  top: var(--headerHeight, 55px);
   left: 0px;
   right: 0px;
   bottom: 0px;
@@ -834,9 +844,9 @@ nav li {
     top: 593px;
   }
 
-  #wrapper {
-    top: 35px;
-  }
+  /* The #wrapper override that used to live here (top: 35px, to match this block's
+     shorter header) is gone: #wrapper now clears the header's real measured height,
+     which already accounts for this. */
 }
 
 @media (max-height: 702px) {
@@ -1026,14 +1036,12 @@ nav li {
     float: none;
   }
 
-  /* With the About/GitHub nav gone, the header fits its one row (min-height 35px)
-     on virtually every real phone now -- a little more than that for breathing room,
-     rather than the old fixed 100px clearance sized for a two-row header. #wrapper
-     can't size itself off a sibling's auto height without restructuring more than
-     this needs to, so it stays a fixed guess, just a much closer one now. */
-  #wrapper {
-    top: 40px;
-  }
+  /* No #wrapper override here any more either. This was the guess that actually bit:
+     40px of clearance for a header that really measures ~64px once the drawer toggle
+     buttons are in it, leaving the canvas covering their bottom halves. #wrapper
+     tracks the header's measured height now, so the header is free to be as tall as
+     its contents need -- including wrapping to a second row on a very narrow phone,
+     which the fixed value could never have survived. */
 
   /* All the pre-game/dialog boxes below (.centred, .modal and their fixed-width
      variants) were sized for desktop and simply run off the edges of a phone-width

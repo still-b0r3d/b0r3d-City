@@ -41,8 +41,21 @@
         </p>
         <h3 class="alignCenter chunk">Version 0.89 &mdash; First Release</h3>
         <p>
-          This is b0r3d-city's first versioned release. Everything on this page&mdash;Scenarios, Classic Cities, the civic buildings, the windowing system, all of it&mdash;is what shipped in it. Prefer playing off the web? Two portable Windows builds are attached to <a href="https://github.com/still-b0r3d/b0r3d-City/releases" target="_blank">this repo's Releases</a>: <code>b0r3d-city.exe</code>, a full offline build that bundles this version and needs no connection, and <code>b0r3d-city-online.exe</code>, a thin launcher that just opens whatever's live here&mdash;never goes stale, but needs one.
+          This is b0r3d-city's first versioned release, and everything below is what shipped in it. Prefer playing off the web? Two portable Windows builds are attached to <a href="https://github.com/still-b0r3d/b0r3d-City/releases" target="_blank">this repo's Releases</a>: <code>b0r3d-city.exe</code>, a full offline build that bundles this version and needs no connection, and <code>b0r3d-city-online.exe</code>, a thin launcher that just opens whatever's live here&mdash;never goes stale, but needs one.
         </p>
+        <ul>
+          <li><strong>A b0r3d.org build:</strong> Donation-free, with its own title, header, welcome text, and build-ID scheme&mdash;not upstream micropolisJS's.</li>
+          <li><strong>A real windowing UI:</strong> Every panel is a draggable window that snaps to the edges of others, instead of one fixed dialog at a time. Budget's the one exception, since it still needs to pause the game.</li>
+          <li><strong>Full Scenario mode:</strong> 9 scenarios&mdash;the 8 classic Micropolis cities plus an original Zombies one&mdash;each with an objective, a deadline, and usually a disaster already underway when you arrive.</li>
+          <li><strong>Classic Cities:</strong> The same 8 historical maps as freeform starting points, fully built out, no objective or deadline attached.</li>
+          <li><strong>Four new civic buildings:</strong> Hospital, School, Casino, and Library, each with a real effect on land value or demand instead of just sitting there.</li>
+          <li><strong>Cheat menu:</strong> Free funds, free building, and every disaster on demand, for testing or just watching the world burn.</li>
+          <li><strong>Named, multi-slot saves:</strong> Up to 3 saves at once, with overwrite/delete confirmation, replacing the original single silent-overwrite save.</li>
+          <li><strong>Shared global leaderboard:</strong> Tied into b0r3d.org's other arcade games, with cheat-tainted cities blocked from submitting a score.</li>
+          <li><strong>Map zoom:</strong> 0.5x&ndash;3x, from a full overview down to a close-up.</li>
+          <li><strong>Touch support:</strong> One and two-finger pan, tap-to-place, drag-to-paint for road/rail/wire, and a drawer layout for phone-width screens.</li>
+          <li><strong>A pile of upstream engine bugs fixed:</strong> Traffic simulation and earthquakes never actually worked before this; a bad sprite draw could silently freeze the whole game.</li>
+        </ul>
         <h3 class="alignCenter chunk">What's New Since v0.89</h3>
         <p>
           Everything below shipped after the version above went out. Newest first.

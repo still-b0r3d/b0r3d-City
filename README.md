@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Version:** 0.89 — the first versioned release. Everything below shipped as part of it.
+**Version:** 0.89, plus everything under "What's New Since v0.89" below — see [Changelog](#changelog).
 
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
@@ -18,9 +18,23 @@ The web version at the link above is always current. For a desktop build, grab o
 
 Both are unsigned portable Windows executables — no install required, just run one. Windows SmartScreen may warn on first run.
 
-## What's different from upstream
+## Changelog
 
-On top of the original micropolisJS engine, this fork's first release (v0.89) adds:
+Everything this fork adds on top of the original micropolisJS engine, newest first. See also the in-game [About page](https://b0r3d.org/b0r3d-city/about.html), which carries the same changelog plus a Known Issues section for players.
+
+### What's New Since v0.89
+
+- **Main Menu button:** the Menu panel has a way back to the splash screen now, ruled off from the rest of the list since it's the only entry there that throws the city away. It confirms first and pauses the city while it asks.
+- **Landscape phones fixed:** a phone turned sideways used to get the full desktop layout squeezed into a screen not tall enough for it &mdash; panels overlapping, Zoom Out buried and unclickable. "Compact" now means small in either dimension, not just narrow, so it drops into the scrollable drawer layout instead.
+- **Large Park:** a 4x4, $2,000 counterpart to the small Park tool. Where Park just scatters some trees, Large Park is the deliberate, expensive version &mdash; it raises land value in the blocks around it, same as the Hospital and Library.
+- **Twitter widget removed:** the old share-to-Twitter button and everything it pulled in from platform.twitter.com is gone.
+- **Left-side panels no longer overlap:** on shorter windows, the Town Info/Menu/Demand column now shrinks the resizable Demand graph to make room instead of stacking panels on top of each other and burying buttons underneath.
+- **Schools and Casinos rebalanced:** buying enough of them used to pin residential/commercial demand permanently at maximum, effectively turning off the economy. The boost each one gives now tapers off the more you build.
+- **Scenarios now survive a save:** saving mid-scenario used to silently throw the scenario away. Scenario saves now reload exactly as you left them, disasters, deadlines and all.
+- **Scenario goal shown while you play:** Town Info now shows the current scenario, your score against the target, and how many years are left, the whole time you're playing &mdash; not just once, on the splash screen.
+- **Bug-fix sweep:** Classic Cities and Scenarios crashing on load is fixed, along with a batch of smaller ones &mdash; stranded off-screen panels, unclickable mobile drawer toggles, W/A/S/D and the arrow keys not working while typing a save name or high-score initials, every pre-built city wrongly congratulating you for "reaching" the size it already started at, Query misreporting custom building names, one Escape press closing every open window instead of just the top one, a stuck Pause button label, and a bad tile that could freeze the whole map's rendering.
+
+### Version 0.89 &mdash; First Release
 
 - A donation-free, b0r3d.org-branded build (custom title/header/welcome text, its own build-ID scheme)
 - A real windowing UI: dialogs are draggable, stackable windows that snap to each other's edges, instead of one fixed modal at a time &mdash; Budget's still the exception that pauses the sim while open

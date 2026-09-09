@@ -1,7 +1,7 @@
 import { Position } from './position.ts';
 import { CUSTOM_BUILDINGS } from './customBuildings.js';
 
-// Shared by all four of b0r3d-city's custom buildings: unpowered or road-disconnected
+// Shared by every one of b0r3d-city's custom buildings: unpowered or road-disconnected
 // halves a building's effectiveness, exactly matching Police/Fire Station's treatment
 // (see emergencyServices.js) -- these just have no budget slider of their own to also
 // scale by, so each uses a fixed strength instead of one read from simData.budget.
@@ -18,11 +18,11 @@ var applyCoverageModifiers = function(map, x, y, simData, effect) {
 };
 
 
-// Hospital and Library raise land value in a radius, the same coverage-map mechanism
+// Hospital, Library, Large Park and Museum raise land value in a radius, the same coverage-map mechanism
 // Police/Fire Station use for crime/fire risk (see emergencyServices.js and
 // civicBuildingScan in blockMapUtils.js) -- both share one civicBuildingMap since they
-// contribute to the same underlying "land value bonus", not two separate systems.
-// Effect strength (400/300) lives on each building's registry entry in
+// contribute to the same underlying "land value bonus", not four separate systems.
+// Effect strength (400/300/350/500) lives on each building's registry entry in
 // customBuildings.js, not duplicated here.
 var handleCoverageBuilding = function(censusStat, effect) {
   return function(map, x, y, simData) {
@@ -35,10 +35,11 @@ var handleCoverageBuilding = function(censusStat, effect) {
 };
 
 
-// School and Casino instead feed straight into valves.js's residential/commercial
-// demand formula as a flat per-building nudge (see SCHOOL_RESIDENTIAL_BOOST/
-// CASINO_COMMERCIAL_BOOST there) -- no coverage radius, just a citywide count, so no
-// blockMap needed here, just a census accumulator.
+// School, University, Casino, Arcade and Data Centre instead feed straight into
+// valves.js's residential/commercial/industrial demand formula as a citywide nudge
+// (see VALVE_MAX_BOOST there, and the `valve`/`weight` fields each carries in the
+// registry) -- no coverage radius, just a count, so no blockMap needed here, just a
+// census accumulator.
 var handleDemandBuilding = function(censusStat) {
   return function(map, x, y, simData) {
     simData.census[censusStat] += applyCoverageModifiers(map, x, y, simData, 1);

@@ -11,6 +11,7 @@
  *
  */
 
+import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { EventEmitter } from './eventEmitter.js';
 import { VALVES_UPDATED } from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
@@ -29,8 +30,8 @@ var RES_VALVE_RANGE = 2000;
 var COM_VALVE_RANGE = 1500;
 var IND_VALVE_RANGE = 1500;
 
-// Schools and Casinos nudge their respective demand ratios directly, independent of
-// the organic employment/migration math below.
+// b0r3d-city's own civic buildings nudge their respective demand ratios directly,
+// independent of the organic employment/migration math below.
 //
 // The nudge saturates rather than scaling linearly with how many you've built. It used
 // to be a flat +0.05 per building, which sounds small but is applied to a *growth
@@ -44,9 +45,35 @@ var IND_VALVE_RANGE = 1500;
 // keeps every later one worth something without ever reaching the cap, and tops out at
 // MAX no matter how many are crammed in. HALF is the count at which half the maximum
 // has been earned.
-var SCHOOL_RESIDENTIAL_MAX_BOOST = 0.25;
-var CASINO_COMMERCIAL_MAX_BOOST = 0.25;
+//
+// MAX is per *valve*, not per building type: everything feeding residential demand
+// draws on one shared 0.25 rather than each new building type stacking a fresh 0.25
+// on top. That is what stops the fix above being quietly undone by adding more kinds
+// of building -- resRatio is clamped to resRatioMax (2) below and normally sits
+// around 1.0-1.3, so two independent 0.25s would put that clamp back within easy
+// reach and pin demand at maximum again, which is the exact failure this curve
+// exists to prevent. Each building's `weight` in customBuildings.js says how much of
+// a School/Casino one of it counts for against the shared ceiling, so a University
+// can be worth six Schools without needing a second ceiling of its own.
+var VALVE_MAX_BOOST = {
+  residential: 0.25,
+  commercial: 0.25,
+  industrial: 0.25,
+};
 var DEMAND_BOOST_HALF_POINT = 4;
+
+// Which census counters feed which valve, grouped once at load rather than rebuilt on
+// every setValves call (this runs each tick). Read straight from the registry, so a
+// new demand building needs no line here -- see customBuildings.js.
+var DEMAND_STATS_BY_VALVE = {};
+CUSTOM_BUILDINGS.forEach(function(building) {
+  var effect = building.effect;
+  if (effect.type !== 'demand')
+    return;
+
+  var stats = DEMAND_STATS_BY_VALVE[effect.valve] || (DEMAND_STATS_BY_VALVE[effect.valve] = []);
+  stats.push({ censusStat: effect.censusStat, weight: effect.weight });
+});
 
 // count is fractional by design: civicBuildings.js scores an unpowered or
 // road-disconnected building as a fraction of a working one, matching how Police/Fire
@@ -56,6 +83,19 @@ var saturatingBoost = function(count, maxBoost) {
     return 0;
 
   return maxBoost * count / (count + DEMAND_BOOST_HALF_POINT);
+};
+
+
+var demandBoost = function(census, valve) {
+  var stats = DEMAND_STATS_BY_VALVE[valve];
+  if (stats === undefined)
+    return 0;
+
+  var count = 0;
+  for (var i = 0, l = stats.length; i < l; i++)
+    count += census[stats[i].censusStat] * stats[i].weight;
+
+  return saturatingBoost(count, VALVE_MAX_BOOST[valve]);
 };
 
 
@@ -145,8 +185,9 @@ Valves.prototype.setValves = function(gameLevel, census, budget) {
   else
     indRatio = projectedIndPop;
 
-  resRatio += saturatingBoost(census.schoolPop, SCHOOL_RESIDENTIAL_MAX_BOOST);
-  comRatio += saturatingBoost(census.casinoPop, CASINO_COMMERCIAL_MAX_BOOST);
+  resRatio += demandBoost(census, 'residential');
+  comRatio += demandBoost(census, 'commercial');
+  indRatio += demandBoost(census, 'industrial');
 
   resRatio = Math.min(resRatio, resRatioMax);
   comRatio = Math.min(comRatio, comRatioMax);

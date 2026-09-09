@@ -29,11 +29,34 @@ var RES_VALVE_RANGE = 2000;
 var COM_VALVE_RANGE = 1500;
 var IND_VALVE_RANGE = 1500;
 
-// Each School/Casino nudges its respective demand ratio directly, independent of the
-// organic employment/migration math below -- applied before the resRatioMax/comRatioMax
-// clamp further down, so building dozens of them can't run demand away unboundedly.
-var SCHOOL_RESIDENTIAL_BOOST = 0.05;
-var CASINO_COMMERCIAL_BOOST = 0.05;
+// Schools and Casinos nudge their respective demand ratios directly, independent of
+// the organic employment/migration math below.
+//
+// The nudge saturates rather than scaling linearly with how many you've built. It used
+// to be a flat +0.05 per building, which sounds small but is applied to a *growth
+// ratio* that normally sits around 1.0-1.3 against a hard ceiling of 2.0 (resRatioMax
+// below) -- so roughly fourteen schools, about $11,000, pinned residential demand at
+// maximum permanently and the employment loop stopped mattering at all. That's not a
+// civic building any more, it's an off switch for the economy.
+//
+// The curve below is boost = MAX * n / (n + HALF), which is worth exactly the old
+// +0.05 for the first building (so a single school feels the same as it always did),
+// keeps every later one worth something without ever reaching the cap, and tops out at
+// MAX no matter how many are crammed in. HALF is the count at which half the maximum
+// has been earned.
+var SCHOOL_RESIDENTIAL_MAX_BOOST = 0.25;
+var CASINO_COMMERCIAL_MAX_BOOST = 0.25;
+var DEMAND_BOOST_HALF_POINT = 4;
+
+// count is fractional by design: civicBuildings.js scores an unpowered or
+// road-disconnected building as a fraction of a working one, matching how Police/Fire
+// coverage is treated, so a neglected school is worth proportionally less here too.
+var saturatingBoost = function(count, maxBoost) {
+  if (count <= 0)
+    return 0;
+
+  return maxBoost * count / (count + DEMAND_BOOST_HALF_POINT);
+};
 
 
 var taxTable = [
@@ -122,8 +145,8 @@ Valves.prototype.setValves = function(gameLevel, census, budget) {
   else
     indRatio = projectedIndPop;
 
-  resRatio += census.schoolPop * SCHOOL_RESIDENTIAL_BOOST;
-  comRatio += census.casinoPop * CASINO_COMMERCIAL_BOOST;
+  resRatio += saturatingBoost(census.schoolPop, SCHOOL_RESIDENTIAL_MAX_BOOST);
+  comRatio += saturatingBoost(census.casinoPop, CASINO_COMMERCIAL_MAX_BOOST);
 
   resRatio = Math.min(resRatio, resRatioMax);
   comRatio = Math.min(comRatio, comRatioMax);

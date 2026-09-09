@@ -14,7 +14,7 @@
 // Single source of truth for b0r3d-city's own custom placeable buildings (as opposed to
 // the original engine's zones/buildings, which stay named individually in
 // tileValues.ts). Adding a new building is: draw its art at the next free tile offset
-// in images/tiles.png/images/tilessnow.png, then add one entry to RAW_BUILDINGS below
+// in images/tiles.png, then add one entry to RAW_BUILDINGS below
 // -- gameTools.js, civicBuildings.js, zoneUtils.js and the toolbar all consume this
 // list generically, so no per-building code is needed. Every building needs its
 // censusStat declaring in census.js's accumulator, which is the only hand-edit left:
@@ -134,13 +134,12 @@ var RAW_BUILDINGS = [
   // Future buildings just get appended here -- tile IDs below are computed
   // automatically from size + position in this list, never hand-picked.
   //
-  // Tile budget: the sheets are 512x608, i.e. 1216 tiles, and the list above ends at
-  // 1198, leaving 17. Both sheets were grown from 576 to 608 to fit the last five
-  // buildings -- tileSet.js derives its tile count from the sheet's height, so nothing
-  // in the code caps this, but the art files have to grow first, and every added row
-  // costs startup time: TileSet slices each tile through canvas.toDataURL at roughly
-  // 5.5ms a tile, across two sheets. Grow by the smallest whole number of rows that
-  // fits what's being added, not in generous round numbers.
+  // Tile budget: the sheet is 512x608, i.e. 1216 tiles, and the list above ends at
+  // 1198, leaving 17. It was grown from 576 to 608 to fit the last five buildings --
+  // tileSet.js derives its tile count from the sheet's height, so nothing in the code
+  // caps this, but the art file has to grow first, and every added row costs startup
+  // time, since TileSet turns each tile into its own Image via canvas.toDataURL.
+  // Grow by the smallest whole number of rows that fits what's being added.
 ];
 
 // baseTile/centreTile/lastTile follow BuildingTool's own convention

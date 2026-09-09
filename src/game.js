@@ -31,7 +31,6 @@ import { MonsterTV } from './monsterTV.js';
 import { Notification } from './notification.js';
 import { Panel } from './panel.js';
 import { QueryWindow } from './queryWindow.js';
-import { Random } from './random.ts';
 import { RCI } from './rci.js';
 import { SaveWindow } from './saveWindow.js';
 import { ScenarioController } from './scenarioController.js';
@@ -79,7 +78,7 @@ var renderCustomBuildingButtons = function() {
 };
 
 
-function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
+function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   difficulty = difficulty || 0;
   var savedGame;
 
@@ -92,7 +91,6 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   }
 
   this.tileSet = tileSet;
-  this.snowTileSet = snowTileSet;
   this.defaultSpeed = Simulation.SPEED_MED;
   this.simulation = new Simulation(this.gameMap, difficulty, this.defaultSpeed, savedGame);
 
@@ -252,10 +250,6 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   // And pauses
   this.inputStatus.addEventListener(Messages.SPEED_CHANGE, this.handlePause.bind(this));
-
-  // And date changes
-  // XXX Not yet activated
-  //this.simulation.addEventListener(Messages.DATE_UPDATED, this.onDateChange.bind(this));
 
   this.infoBar = InfoBar('cclass', 'population', 'score', 'funds', 'date', 'name');
   var initialValues = {
@@ -568,14 +562,6 @@ Game.prototype._getTopmostWindow = function() {
   }
 
   return topWindow;
-};
-
-
-Game.prototype.onDateChange = function(date) {
-  if (date.month === 10 && Random.getChance(10))
-    this.gameCanvas.changeTileSet(this.snowTileSet);
-  else if (date.month === 1)
-    this.gameCanvas.changeTileSet(this.tileSet);
 };
 
 

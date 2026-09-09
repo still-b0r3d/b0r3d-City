@@ -18,7 +18,6 @@ import { SiteEnv } from './siteEnv.js';
 import { SplashScreen } from './splashScreen.js';
 import { TileSet } from './tileSet.js';
 import { TileSetURI } from './tileSetURI.ts';
-import { TileSetSnowURI } from './tileSetSnowURI.ts';
 
 /*
  *
@@ -28,13 +27,7 @@ import { TileSetSnowURI } from './tileSetSnowURI.ts';
  */
 
 
-var fallbackImage, tileSet, snowTileSet;
-
-
-var onTilesLoaded = function() {
-  var snowTiles = $('#snowtiles')[1];
-  snowTileSet = new TileSet(snowTiles, onAllTilesLoaded, onFallbackTilesLoaded);
-};
+var fallbackImage, tileSet;
 
 
 var onAllTilesLoaded = function() {
@@ -42,7 +35,7 @@ var onAllTilesLoaded = function() {
   var sprites = $('#sprites')[0];
   if (sprites.complete) {
     $('#loadingBanner').css('display', 'none');
-    var s = new SplashScreen(tileSet, snowTileSet, sprites);
+    var s = new SplashScreen(tileSet, sprites);
   } else {
      window.setTimeout(onAllTilesLoaded, 0);
   }
@@ -56,23 +49,9 @@ var onFallbackError = function() {
 };
 
 
-var onFallbackSnowLoad = function() {
-  fallbackImage.onload = fallbackImage.onerror = null;
-  snowTileSet = new TileSet(fallbackImage, onAllTilesLoaded, onFallbackError);
-};
-
-
-var onFallbackTilesLoaded = function() {
-  fallbackImage = new Image();
-  fallbackImage.onload = onFallbackSnowLoad;
-  fallbackImage.onerror = onFallbackError;
-  fallbackImage.src = TileSetSnowURI;
-};
-
-
 var onFallbackLoad = function() {
   fallbackImage.onload = fallbackImage.onerror = null;
-  tileSet = new TileSet(fallbackImage, onFallbackTilesLoaded, onFallbackError);
+  tileSet = new TileSet(fallbackImage, onAllTilesLoaded, onFallbackError);
 };
 
 
@@ -123,5 +102,4 @@ if (!SiteEnv.isMainSite()) {
 
 
 var tiles = $('#tiles')[0];
-tileSet = new TileSet(tiles, onTilesLoaded, tileSetError);
-var snowtiles = $('#snowtiles')[1];
+tileSet = new TileSet(tiles, onAllTilesLoaded, tileSetError);

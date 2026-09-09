@@ -53,29 +53,28 @@ var onresize = null;
 
 
 // If the window is initially too small, try and relaunch if it gets bigger.
-// All three arguments have to be carried through: this used to pass only two, so the
-// sprite sheet arrived as snowTileSet and the relaunched splash screen got `undefined`
+// Both arguments have to be carried through: this once passed only one, so the sprite
+// sheet landed in the wrong parameter and the relaunched splash screen got `undefined`
 // for its sprites -- meaning the recovery path built a game that couldn't draw a single
 // sprite, which is worse than the too-small screen it was recovering from.
-var makeResizeListener = function(tileSet, snowTileSet, spriteSheet) {
+var makeResizeListener = function(tileSet, spriteSheet) {
   return function(e) {
     $(window).off('resize');
-    var s = new SplashScreen(tileSet, snowTileSet, spriteSheet);
+    var s = new SplashScreen(tileSet, spriteSheet);
   };
 };
 
 
-function SplashScreen(tileSet, snowTileSet, spriteSheet) {
+function SplashScreen(tileSet, spriteSheet) {
   // We don't launch the game if the screen is too small, however, we should retain the right to do so
   // should the situation change...
   if ($('#tooSmall').is(':visible')) {
-    onresize = makeResizeListener(tileSet, snowTileSet, spriteSheet);
+    onresize = makeResizeListener(tileSet, spriteSheet);
     $(window).on('resize', onresize);
     return;
   }
 
   this.tileSet = tileSet;
-  this.snowTileSet = snowTileSet;
   this.spriteSheet = spriteSheet;
   this.map = MapGenerator();
 
@@ -133,7 +132,7 @@ var escapeHtml = MiscUtils.escapeHtml;
 var describeSave = function(entry) { return MiscUtils.describeSave(entry, Text); };
 
 
-// self is the SplashScreen instance (its tileSet/snowTileSet/spriteSheet are
+// self is the SplashScreen instance (its tileSet/spriteSheet are
 // needed to launch a Game once a save is picked) -- threaded through explicitly
 // rather than relying on jQuery's `this`, since rows get rebound after a delete.
 var renderLoadList = function(self) {
@@ -341,7 +340,7 @@ var loadSave = function(e) {
   $('#loadList').toggle();
 
   // Launch
-  var g = new Game(savedGame, this.tileSet, this.snowTileSet, this.spriteSheet, Simulation.LEVEL_EASY);
+  var g = new Game(savedGame, this.tileSet, this.spriteSheet, Simulation.LEVEL_EASY);
   exposeCheatAPI(g);
 };
 
@@ -386,7 +385,7 @@ var play = function(e) {
   var name = $('#nameForm').val();
 
   // Launch a new game
-  var g = new Game(this.map, this.tileSet, this.snowTileSet, this.spriteSheet, difficulty, name);
+  var g = new Game(this.map, this.tileSet, this.spriteSheet, difficulty, name);
   exposeCheatAPI(g);
 };
 

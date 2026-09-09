@@ -43,6 +43,28 @@
         <p>
           This is b0r3d-city's first versioned release. Everything on this page&mdash;Scenarios, Classic Cities, the civic buildings, the windowing system, all of it&mdash;is what shipped in it. Prefer playing off the web? Two portable Windows builds are attached to <a href="https://github.com/still-b0r3d/b0r3d-City/releases" target="_blank">this repo's Releases</a>: <code>b0r3d-city.exe</code>, a full offline build that bundles this version and needs no connection, and <code>b0r3d-city-online.exe</code>, a thin launcher that just opens whatever's live here&mdash;never goes stale, but needs one.
         </p>
+        <h3 class="alignCenter chunk">What's New Since v0.89</h3>
+        <p>
+          Everything below shipped after the version above went out. Newest first.
+        </p>
+        <ul>
+          <li><strong>Main Menu button:</strong> The Menu panel has a way back to the splash screen now, ruled off from the rest of the list since it's the only entry there that throws the city away. It confirms first and pauses the city while it asks.</li>
+          <li><strong>Landscape phones fixed:</strong> A phone turned sideways used to get the full desktop layout squeezed into a screen not tall enough for it&mdash;panels overlapping, Zoom Out buried and unclickable. "Compact" now means small in either dimension, not just narrow, so it drops into the scrollable drawer layout instead.</li>
+          <li><strong>Large Park:</strong> A 4x4, $2,000 counterpart to the small Park tool. Where Park just scatters some trees, Large Park is the deliberate, expensive version&mdash;it raises land value in the blocks around it, same as the Hospital and Library.</li>
+          <li><strong>Twitter widget removed:</strong> The old share-to-Twitter button and everything it pulled in from platform.twitter.com is gone. It was never wanted here.</li>
+          <li><strong>Left-side panels no longer overlap:</strong> On shorter windows, the Town Info/Menu/Demand column now shrinks the resizable Demand graph to make room instead of stacking panels on top of each other and burying buttons underneath.</li>
+          <li><strong>Schools and Casinos rebalanced:</strong> Buying enough of them used to pin residential/commercial demand permanently at maximum, effectively turning off the economy. The boost each one gives now tapers off the more you build, so it stays useful without becoming a cheat code.</li>
+          <li><strong>Scenarios now survive a save:</strong> Saving mid-scenario used to silently throw the scenario away&mdash;reloading gave back an ordinary city with no objective, no deadline, and the wrong start date. Scenario saves now reload exactly as you left them, disasters, deadlines and all.</li>
+          <li><strong>Scenario goal shown while you play:</strong> The objective and countdown used to appear once, on the splash screen, and never again. Town Info now shows the current scenario, your score against the target, and how many years are left, the whole time you're playing.</li>
+          <li><strong>Bug-fix sweep:</strong> Classic Cities and Scenarios crashing on load (blank screen, no error) is fixed, along with a batch of smaller ones: panels that could get stranded fully off-screen, mobile drawer toggles you could mistap right through to the map underneath, W/A/S/D and the arrow keys not working while typing a save name or high-score initials, every pre-built city (Classic Cities, Scenarios, loaded saves) wrongly congratulating you for "reaching" the size it already started at, Query misreporting every custom building's name, one Escape press closing every open window instead of just the top one, the Pause button's label getting stuck on the wrong state, and a single bad tile that could freeze the whole map's rendering.</li>
+        </ul>
+        <h3 class="alignCenter chunk">Known Issues</h3>
+        <ul>
+          <li><strong>Startup is slow&mdash;around 10&ndash;13 seconds on first load.</strong> That's the tile sheets being decoded, not anything network-related. Being worked on.</li>
+          <li><strong>"Main Menu" reloads the page</strong> rather than dropping you straight back at the splash screen in place. Nothing is lost&mdash;your save is already written to localStorage before it asks&mdash;it just isn't instant yet.</li>
+          <li><strong>High Scores isn't tamper-proof.</strong> Submissions are trusted client-side beyond the cheat-menu flag, fine for a casual leaderboard, just don't mistake three letters on the board for a verified record.</li>
+          <li><strong>The offline <code>b0r3d-city.exe</code> build can't reach the leaderboard at all</strong>&mdash;High Scores will read "Leaderboard unreachable right now" every time. Use <code>b0r3d-city-online.exe</code> or the web version if you want to submit a score.</li>
+        </ul>
         <h3 class="alignCenter chunk">Classic Cities</h3>
         <p>
           From the welcome screen, Classic Cities drops you into one of the 8 original Micropolis scenario maps&mdash;Dullsville, San Francisco, Hamburg, Bern, Tokyo, Detroit, Boston, and Rio de Janeiro&mdash;fully built out and ready to go, with no objective or deadline attached. Think of it as a head start with history, not a puzzle to solve. Bulldoze it flat or build around what's already there&mdash;it's yours now. Want an actual goal instead? The same 8 cities show up again under Scenarios, below.

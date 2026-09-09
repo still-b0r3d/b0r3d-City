@@ -711,11 +711,6 @@ nav li {
   color: dimgray;
 }
 
-#tw {
-  position: absolute;
-  top: 300px;
-}
-
 #tvContainer {
   width: 177px;
   height: 128px;
@@ -891,10 +886,6 @@ nav li {
   #notifications {
     top: 563px;
   }
-
-  #tw {
-    top: 280px;
-  }
 }
 
 @media (max-height: 672px) {
@@ -917,10 +908,6 @@ nav li {
 
   #notifications {
     top: 533px;
-  }
-
-  #tw {
-    top: 260px;
   }
 }
 
@@ -952,10 +939,6 @@ nav li {
   #notifications {
     top: 503px;
   }
-
-  #tw {
-    top: 240px;
-  }
 }
 
 @media (max-height: 612px) {
@@ -978,10 +961,6 @@ nav li {
 
   #notifications {
     top: 473px;
-  }
-
-  #tw {
-    display: none;
   }
 }
 

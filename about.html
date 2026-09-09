@@ -48,6 +48,7 @@
           Everything below shipped after the version above went out. Newest first.
         </p>
         <ul>
+          <li><strong>Startup is about eight times faster&mdash;first load went from roughly 13 seconds to under two.</strong> The game shipped two tile sheets and only ever drew from one. The second was downloaded, decoded and cut into a thousand-odd separate images on every single launch, and then never painted. It's gone.</li>
           <li><strong>Nine more civic buildings:</strong> Arcade, Museum, University, Data Centre, Rukus, Amusement Park, Megamart, Bar and Burger Baron. The Bar, Burger Baron and Arcade are the cheap, small routes to commercial demand; the Amusement Park and Megamart are the expensive, high-pull ones. The University is the School's heavyweight counterpart&mdash;one is worth six of them, in a fraction of the space. The Museum raises nearby land value harder than anything else you can build, Hospital included, and the Data Centre is the first building in the game that pushes <em>industrial</em> demand; nothing did before. And Rukus is <a href="https://b0r3d.org/rukus.html">the cat</a>, as a civic monument.</li>
           <li><strong>Civic demand buildings now share one ceiling per demand type,</strong> instead of each kind of building bringing a ceiling of its own&mdash;otherwise adding more kinds of building re-breaks the economy the same way stacking Schools once did. Each one carries a weight saying how much of a School or Casino it counts for, so a University can be worth six Schools without needing a second ceiling.</li>
           <li><strong>Main Menu button:</strong> The Menu panel has a way back to the splash screen now, ruled off from the rest of the list since it's the only entry there that throws the city away. It confirms first and pauses the city while it asks.</li>
@@ -62,7 +63,6 @@
         </ul>
         <h3 class="alignCenter chunk">Known Issues</h3>
         <ul>
-          <li><strong>Startup is slow&mdash;around 10&ndash;13 seconds on first load.</strong> That's the tile sheets being decoded, not anything network-related. Being worked on.</li>
           <li><strong>"Main Menu" reloads the page</strong> rather than dropping you straight back at the splash screen in place. Nothing is lost&mdash;your save is already written to localStorage before it asks&mdash;it just isn't instant yet.</li>
           <li><strong>High Scores isn't tamper-proof.</strong> Submissions are trusted client-side beyond the cheat-menu flag, fine for a casual leaderboard, just don't mistake three letters on the board for a verified record.</li>
           <li><strong>The offline <code>b0r3d-city.exe</code> build can't reach the leaderboard at all</strong>&mdash;High Scores will read "Leaderboard unreachable right now" every time. Use <code>b0r3d-city-online.exe</code> or the web version if you want to submit a score.</li>

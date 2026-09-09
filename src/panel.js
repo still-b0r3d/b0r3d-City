@@ -299,41 +299,97 @@ var columnPanels = [];
 // again underneath it.
 var COLUMN_GAP = 4;
 
+// Leaves the column exactly as tall as the space below it, by taking the shortfall out
+// of whatever can afford to give it up.
+//
+// The three left-hand panels are close to a full column already: on a 1366x768 laptop
+// there's about 47px of slack, and scenario mode's objective readout is bigger than
+// that. Clamping alone can only answer that by overlapping them, which buries the
+// bottom of the Menu panel -- the Zoom In/Zoom Out buttons -- under the demand graph.
+//
+// The graph is the one panel here built to be any size (it recomputes its own scale on
+// every draw, see rci.js), so it's where the shortfall belongs. Taken from the bottom
+// of the column upwards, so the panels carrying text keep their size longest, and never
+// below each panel's own declared minimum.
+var shrinkColumnToFit = function(panels, top) {
+  var i, panel;
+
+  // Hand back anything a previous pass took first, so a window that grows taller
+  // un-squashes the graph instead of leaving it small for the rest of the session.
+  for (i = 0; i < panels.length; i++) {
+    if (panels[i]._columnShrunk) {
+      panels[i]._el.css('height', '');
+      panels[i]._columnShrunk = false;
+
+      if (panels[i]._onResizeCallback)
+        panels[i]._onResizeCallback();
+    }
+  }
+
+  var natural = (panels.length - 1) * COLUMN_GAP;
+  for (i = 0; i < panels.length; i++)
+    natural += panels[i]._el[0].offsetHeight;
+
+  var deficit = natural - (window.innerHeight - top);
+
+  for (i = panels.length - 1; i >= 0 && deficit > 0; i--) {
+    panel = panels[i];
+    if (!panel._resizable)
+      continue;
+
+    var height = panel._el[0].offsetHeight;
+    var give = Math.min(deficit, height - panel._minHeight);
+    if (give <= 0)
+      continue;
+
+    panel._el.css('height', height - give);
+    panel._columnShrunk = true;
+    deficit -= give;
+
+    if (panel._onResizeCallback)
+      panel._onResizeCallback();
+  }
+};
+
+
 Panel.stackColumn = function() {
   if (!isDesktop())
     return;
 
-  var top = null;
+  // A panel the player has dragged or resized is out of the column altogether: it
+  // stays exactly where and how they left it, and the ones below close up underneath
+  // the last panel still in the flow rather than trailing after it across the screen.
+  var flow = columnPanels.filter(function(panel) {
+    return panel._el.is(':visible') && !panel._hasSavedPosition();
+  });
 
-  for (var i = 0; i < columnPanels.length; i++) {
-    var panel = columnPanels[i];
+  if (flow.length === 0)
+    return;
 
-    // A panel the player has dragged is out of the column altogether: it stays exactly
-    // where they left it, and the ones below close up underneath the last panel still
-    // in the flow rather than trailing after it across the screen.
-    if (!panel._el.is(':visible') || panel._hasSavedPosition())
-      continue;
+  // The topmost panel still in the flow anchors the column wherever it already is.
+  var top = flow[0]._el.offset().top;
 
-    // The topmost panel still in the flow anchors the column wherever it already is.
-    if (top === null)
-      top = panel._el.offset().top;
+  shrinkColumnToFit(flow, top);
 
-    panel._el.css('top', top);
-    top += panel._el[0].offsetHeight + COLUMN_GAP;
+  for (var i = 0; i < flow.length; i++) {
+    flow[i]._el.css('top', top);
+    top += flow[i]._el[0].offsetHeight + COLUMN_GAP;
   }
+};
 
-  // A tall enough column doesn't fit a short window -- Town Info alone grows by ~100px
-  // in scenario mode -- and a panel pushed past the bottom edge is exactly as
-  // unreachable as one pushed past the right edge. Pulling the overflow back inside
-  // costs some overlap at the bottom of the stack, which is recoverable by dragging;
-  // being off-screen isn't.
+
+// Stack, then clamp: the column has first refusal on fitting itself into the window,
+// and clamping is only the backstop for what it couldn't (a column of panels that have
+// all been dragged, or one so tall that even a fully-shrunk graph doesn't save it).
+var relayout = function() {
+  Panel.stackColumn();
   Panel.keepAllOnScreen();
 };
 
 
 Panel.setColumn = function(panels) {
   columnPanels = panels;
-  Panel.stackColumn();
+  relayout();
 };
 
 
@@ -341,7 +397,7 @@ Panel.setColumn = function(panels) {
 // (see _onBreakpointChange), so the column has to be recomputed after that too.
 desktopMediaQuery.addEventListener('change', function() {
   if (isDesktop())
-    Panel.stackColumn();
+    relayout();
 });
 
 
@@ -351,10 +407,10 @@ desktopMediaQuery.addEventListener('change', function() {
 // hidden -- a resize arriving in a backgrounded tab would leave a coalescing flag set
 // with no frame ever coming to clear it, silently disabling this listener for the rest
 // of the session.
-var clampTimer = null;
+var relayoutTimer = null;
 window.addEventListener('resize', function() {
-  window.clearTimeout(clampTimer);
-  clampTimer = window.setTimeout(Panel.keepAllOnScreen, 100);
+  window.clearTimeout(relayoutTimer);
+  relayoutTimer = window.setTimeout(relayout, 100);
 });
 
 

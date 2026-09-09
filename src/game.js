@@ -419,8 +419,8 @@ Game.prototype.revealControls = function() {
  // wider window -- without it, a toolbar saved off to the right in a maximised session
  // comes back completely off-screen, with no header left to drag it home by.
  // setColumn then lays the left-hand stack out from the heights they actually turned
- // out to have, rather than the ones their default offsets assumed. It re-clamps on
- // its own afterwards, so this order (clamp, stack, clamp again) is deliberate.
+ // out to have, rather than the ones their default offsets assumed, shrinking it to
+ // fit the window if it has to. It clamps on its own afterwards.
  Panel.keepAllOnScreen();
  Panel.setColumn([this.infoPanel, this.miscButtonsPanel, this.rciPanel]);
 

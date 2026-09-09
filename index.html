@@ -117,6 +117,16 @@
               <div class="elided">
                 Population:<br /> <span id="population">0</span>
               </div>
+              <!-- Scenario mode only: shown (and kept up to date) by
+                   scenarioController.js, which unhides this whole block. Lives inside
+                   Town Info rather than in a window of its own so the objective sits
+                   next to the date and population it's measured against, and so it
+                   comes along for free in the mobile drawer. -->
+              <div id="scenarioInfo" class="hidden">
+                <div id="scenarioName" class="semibold"></div>
+                <div id="scenarioProgress"></div>
+                <div id="scenarioDeadline"></div>
+              </div>
             </div>
           </div>
           <div id="miscButtons" class="alignCenter open controlShadow width140 mintcream z1 initialHidden">

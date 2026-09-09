@@ -333,6 +333,27 @@ nav li {
   font-weight: 600px;
 }
 
+/* Scenario mode's objective/deadline readout, appended inside Town Info (see
+   index.html and scenarioController.js). Ruled off and slightly smaller so it reads
+   as a second section rather than more of the city stats above it -- those describe
+   the city, these describe what's being asked of it. Only ever visible when a
+   scenario is actually running; scenarioController.js unhides it. */
+#scenarioInfo {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+#scenarioName {
+  font-size: 12px;
+}
+
+#scenarioDeadline {
+  opacity: 0.75;
+}
+
 .shadow, .controlShadow {
   -ms-box-shadow: 10px 0px 35px 0px rgba(31,28,31, 0.8);
   -webkit-box-shadow: 10px 0px 35px 0px rgba(31,28,31, 0.8);

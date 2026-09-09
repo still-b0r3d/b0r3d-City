@@ -35,6 +35,7 @@ import { Random } from './random.ts';
 import { RCI } from './rci.js';
 import { SaveWindow } from './saveWindow.js';
 import { ScenarioController } from './scenarioController.js';
+import { getScenario } from './scenarios.js';
 import { ScreenshotLinkWindow } from './screenshotLinkWindow.js';
 import { ScreenshotWindow } from './screenshotWindow.js';
 import { SettingsWindow } from './settingsWindow.js';
@@ -269,9 +270,11 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
 
   // Scenario mode: gameMap carries a `scenario` definition (see scenarios.js)
   // when launched from the Scenarios list on the splash screen, rather than
-  // Classic Cities (freeform) or a fresh/generated map.
+  // Classic Cities (freeform) or a fresh/generated map. load() above puts one
+  // there too when resuming a saved scenario, along with the controller's own
+  // saved progress -- see _savedScenarioState.
   if (this.gameMap.scenario)
-    this.scenarioController = new ScenarioController(this, this.gameMap.scenario);
+    this.scenarioController = new ScenarioController(this, this.gameMap.scenario, this._savedScenarioState || null);
 
   // Every modal window already has its own <header> for a title bar (used today just
   // for the coloured label) -- Panel hooks into that same header as a drag handle and
@@ -334,10 +337,19 @@ Game.prototype.save = function(saveName) {
   BaseTool.save(saveData);
   this.simulation.save(saveData);
 
+  // Scenario mode writes its objective/deadline progress alongside everything else, so
+  // resuming a save drops you back into the same challenge rather than into a freeform
+  // city with the goal, the clock and the year all quietly discarded.
+  if (this.scenarioController)
+    this.scenarioController.save(saveData);
+
   var meta = {
     population: this.simulation.evaluation.cityPop,
     cityClass: this.simulation.evaluation.cityClass,
-    date: this.simulation.getDate()
+    date: this.simulation.getDate(),
+    // Named in the save/load lists so a scenario save is recognisable as one before
+    // you commit to loading it (see MiscUtils.describeSave).
+    scenarioName: this.scenarioController ? this.scenarioController.scenario.name : undefined
   };
 
   var result = Storage.saveGame(saveName, saveData, meta);
@@ -371,6 +383,23 @@ Game.prototype.load = function(saveData) {
   this._cheatsUsed = saveData.cheatsUsed || false;
   BaseTool.load(saveData);
   this.simulation.load(saveData);
+
+  // Only the scenario's slug is stored, not the definition itself, so a rebalanced
+  // scenario (targets and deadlines are explicitly meant to be re-tuned, see
+  // scenarios.js) applies its new numbers to saves made before the change rather than
+  // preserving whatever the old ones happened to be. An unrecognised slug -- a save
+  // from a build where that scenario existed under another name, say -- falls through
+  // to loading the city as an ordinary freeform game rather than refusing to load it.
+  if (saveData.scenario) {
+    var scenario = getScenario(saveData.scenario.slug);
+
+    if (scenario) {
+      this.gameMap.scenario = scenario;
+      this._savedScenarioState = saveData.scenario;
+    } else {
+      console.warn('Save refers to unknown scenario "' + saveData.scenario.slug + '"; loading it as a freeform city');
+    }
+  }
 };
 
 
@@ -385,11 +414,15 @@ Game.prototype.revealControls = function() {
    $(this).removeClass('initialHidden');
  });
 
- // The sidebar panels only become measurable here, which is the first point a
- // position remembered from a wider window can be checked against this one -- without
- // it, a toolbar saved off to the right in a maximised session comes back completely
- // off-screen, with no header left to drag it home by.
+ // The sidebar panels only become measurable here, which is the first point either of
+ // these can do anything useful. keepAllOnScreen catches a position remembered from a
+ // wider window -- without it, a toolbar saved off to the right in a maximised session
+ // comes back completely off-screen, with no header left to drag it home by.
+ // setColumn then lays the left-hand stack out from the heights they actually turned
+ // out to have, rather than the ones their default offsets assumed. It re-clamps on
+ // its own afterwards, so this order (clamp, stack, clamp again) is deliberate.
  Panel.keepAllOnScreen();
+ Panel.setColumn([this.infoPanel, this.miscButtonsPanel, this.rciPanel]);
 
  this._notificationBar.news({subject: Messages.WELCOME});
  this.rci.update({residential: 750, commercial: 750, industrial: 750});

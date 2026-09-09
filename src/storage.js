@@ -225,6 +225,13 @@ var transitionOldSave = function(savedGame) {
       for (var i = 0, l = savedGame.map.length; i < l; i++)
         savedGame.map[i].value = reflowTileValue(savedGame.map[i].value);
 
+      /* falls through */
+    case 4:
+      // Simulation._startingYear became a saved field when scenarios learned to
+      // survive a save/load (each starts in its own year). Everything written before
+      // that is a 1900 city by definition -- scenarios couldn't be saved at all.
+      savedGame._startingYear = 1900;
+
       break;
 
     default:
@@ -261,7 +268,7 @@ var Storage = {
 };
 
 
-Object.defineProperty(Storage, 'CURRENT_VERSION', MiscUtils.makeConstantDescriptor(4));
+Object.defineProperty(Storage, 'CURRENT_VERSION', MiscUtils.makeConstantDescriptor(5));
 Object.defineProperty(Storage, 'LEGACY_KEY', MiscUtils.makeConstantDescriptor('micropolisJSGame'));
 Object.defineProperty(Storage, 'KEY_PREFIX', MiscUtils.makeConstantDescriptor('micropolisJSGame_'));
 Object.defineProperty(Storage, 'INDEX_KEY', MiscUtils.makeConstantDescriptor('micropolisJSSaveIndex'));

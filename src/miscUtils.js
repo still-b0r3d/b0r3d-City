@@ -67,6 +67,11 @@ var describeSave = function(entry, Text) {
   if (meta.cityClass !== undefined && Text.cityClass[meta.cityClass])
     bits.push(Text.cityClass[meta.cityClass]);
 
+  // Scenario saves resume into their objective and deadline, not into freeform play,
+  // so say which one before the player commits to loading it.
+  if (meta.scenarioName)
+    bits.push(meta.scenarioName + ' scenario');
+
   return bits.join(', ');
 };
 

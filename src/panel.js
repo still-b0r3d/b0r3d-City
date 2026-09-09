@@ -280,6 +280,71 @@ Panel.keepAllOnScreen = function() {
 };
 
 
+// True if this panel has a position the player put it in, which always outranks
+// anything computed for them.
+Panel.prototype._hasSavedPosition = function() {
+  return this._loadPosition() !== null;
+};
+
+
+// The left-hand stack, top to bottom. Registered by Game.
+var columnPanels = [];
+
+// Panels in this list are laid out as a column from each one's measured height,
+// instead of from the fixed top offsets they're constructed with. Those offsets had to
+// assume a fixed height for the panel above, which stopped being true as soon as
+// scenario mode added four lines to Town Info -- the Menu panel then simply sat on top
+// of it, covering the objective the whole feature exists to show. Anything the player
+// has dragged themselves is left exactly where they put it, and the column picks up
+// again underneath it.
+var COLUMN_GAP = 4;
+
+Panel.stackColumn = function() {
+  if (!isDesktop())
+    return;
+
+  var top = null;
+
+  for (var i = 0; i < columnPanels.length; i++) {
+    var panel = columnPanels[i];
+
+    // A panel the player has dragged is out of the column altogether: it stays exactly
+    // where they left it, and the ones below close up underneath the last panel still
+    // in the flow rather than trailing after it across the screen.
+    if (!panel._el.is(':visible') || panel._hasSavedPosition())
+      continue;
+
+    // The topmost panel still in the flow anchors the column wherever it already is.
+    if (top === null)
+      top = panel._el.offset().top;
+
+    panel._el.css('top', top);
+    top += panel._el[0].offsetHeight + COLUMN_GAP;
+  }
+
+  // A tall enough column doesn't fit a short window -- Town Info alone grows by ~100px
+  // in scenario mode -- and a panel pushed past the bottom edge is exactly as
+  // unreachable as one pushed past the right edge. Pulling the overflow back inside
+  // costs some overlap at the bottom of the stack, which is recoverable by dragging;
+  // being off-screen isn't.
+  Panel.keepAllOnScreen();
+};
+
+
+Panel.setColumn = function(panels) {
+  columnPanels = panels;
+  Panel.stackColumn();
+};
+
+
+// Crossing back onto desktop re-applies each panel's own default/remembered position
+// (see _onBreakpointChange), so the column has to be recomputed after that too.
+desktopMediaQuery.addEventListener('change', function() {
+  if (isDesktop())
+    Panel.stackColumn();
+});
+
+
 // Debounced rather than run per event: dragging a window's edge fires resize
 // continuously, and each pass reads back every visible panel's geometry. A timer
 // rather than requestAnimationFrame, which doesn't run at all while the page is

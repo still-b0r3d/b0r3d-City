@@ -157,7 +157,11 @@ Simulation.prototype.isPaused = function() {
 };
 
 
-var saveProps = ['_cityTime', '_speed', '_gameLevel'];
+// _startingYear is part of a save because the date the player sees is derived from it
+// plus _cityTime, and scenarios each start in their own year (Boston in 2010, Zombies
+// in 2031, see scenarios.js). Left out, every reloaded scenario reset to 1900 and
+// silently claimed to be a century earlier than it was.
+var saveProps = ['_cityTime', '_speed', '_gameLevel', '_startingYear'];
 
 Simulation.prototype.save = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)

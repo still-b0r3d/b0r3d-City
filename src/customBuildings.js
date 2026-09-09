@@ -14,11 +14,12 @@
 // Single source of truth for b0r3d-city's own custom placeable buildings (as opposed to
 // the original engine's zones/buildings, which stay named individually in
 // tileValues.ts). Adding a new building is: draw its art at the next free tile offset
-// in images/tiles.png/images/tilessnow.png, then add one entry to RAW_BUILDINGS below --
-// gameTools.js, civicBuildings.js, zoneUtils.js and the toolbar all consume this list
-// generically, no per-building code required for the common case. A 4x4 building also
-// needs one switch case added to zoneUtils.js's checkBigZone, following the casino
-// case there as the template -- that one part of 4x4 placement math isn't generated.
+// in images/tiles.png/images/tilessnow.png, then add one entry to RAW_BUILDINGS below
+// -- gameTools.js, civicBuildings.js, zoneUtils.js and the toolbar all consume this
+// list generically, so no per-building code is needed. A coverage-effect building
+// also needs its censusStat declaring in census.js's accumulator, which is the only
+// hand-edit left: 4x4 placement maths used to want four switch cases per building in
+// zoneUtils.js's checkBigZone, and is now derived from the size field here.
 
 // First tile ID past the original engine's own tile range (0-1023) -- see tileFlags.ts's
 // BIT_START for why 1024 was once a hard ceiling here, and why it no longer is.
@@ -44,6 +45,18 @@ var RAW_BUILDINGS = [
     id: 'library', label: 'Library', cost: 1000, size: 3, animated: false,
     colour: 'tan', textColour: null,
     effect: { type: 'coverage', censusStat: 'libraryPop', landValueEffect: 300 },
+  },
+  // The 1x1 park tool (parkTool.js) scatters woods and the odd fountain and does
+  // nothing for land value; this is the deliberate, expensive version of the same
+  // idea. Coverage rather than demand: a park earns its keep by making the blocks
+  // around it nicer to live in, which is exactly what the civicBuildingMap models.
+  // 350 sits between the Library (300) and the Hospital (400) -- more than a
+  // reading room, less than an emergency department, and it costs 4x the footprint
+  // of either.
+  {
+    id: 'largePark', label: 'Large Park', cost: 2000, size: 4, animated: false,
+    colour: 'forestgreen', textColour: 'white',
+    effect: { type: 'coverage', censusStat: 'largeParkPop', landValueEffect: 350 },
   },
   // Future buildings just get appended here -- tile IDs below are computed
   // automatically from size + position in this list, never hand-picked.

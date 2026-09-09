@@ -16,11 +16,34 @@ import { BULLBIT, POWERBIT } from "./tileFlags.ts";
 import { CUSTOM_BUILDINGS } from "./customBuildings.js";
 import * as TileValues from "./tileValues.ts";
 
-// Casino's centre tile isn't a named TileValues constant -- its ID is computed by
-// customBuildings.js, see that file for why.
-var CASINO_CENTRE = CUSTOM_BUILDINGS.filter(function(b) { return b.id === 'casino'; })[0].centreTile;
+// b0r3d-city's own 4x4 buildings (see customBuildings.js), keyed by every tile value
+// a map scan can meet one at. The engine's own 4x4 zones are hand-listed as `case`
+// lines below because their tile IDs are named TileValues constants; these are
+// computed from the registry, so they can be derived instead -- which is what stops
+// each new 4x4 building needing four more `case` lines added here by hand, the one
+// part of adding a building that used not to be generic.
+//
+// The four offsets are the same set the engine lists for each of its own 4x4 zones:
+// the centre tile, and the tiles one to its right, one below, and one below-right,
+// each carrying the delta back to the centre. Callers only ever read these (see
+// bulldozerTool.js, the sole one), so sharing the objects is safe.
+var CUSTOM_BIG_ZONES = {};
+CUSTOM_BUILDINGS.forEach(function(building) {
+  if (building.size !== 4)
+    return;
+
+  var centre = building.centreTile;
+  CUSTOM_BIG_ZONES[centre]     = {zoneSize: 4, deltaX:  0, deltaY:  0};
+  CUSTOM_BIG_ZONES[centre + 1] = {zoneSize: 4, deltaX: -1, deltaY:  0};
+  CUSTOM_BIG_ZONES[centre + 4] = {zoneSize: 4, deltaX:  0, deltaY: -1};
+  CUSTOM_BIG_ZONES[centre + 5] = {zoneSize: 4, deltaX: -1, deltaY: -1};
+});
 
 var checkBigZone = function(tileValue) {
+  var custom = CUSTOM_BIG_ZONES[tileValue];
+  if (custom !== undefined)
+    return custom;
+
   var result;
 
   switch (tileValue) {
@@ -29,7 +52,6 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT:
     case TileValues.NUCLEAR:
     case TileValues.STADIUM:
-    case CASINO_CENTRE:
       result = {zoneSize: 4, deltaX: 0, deltaY: 0};
       break;
 
@@ -40,7 +62,6 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 1:
     case TileValues.NUCLEAR + 1:
     case TileValues.STADIUM + 1:
-    case CASINO_CENTRE + 1:
       result = {zoneSize: 4, deltaX: -1, deltaY: 0};
       break;
 
@@ -48,7 +69,6 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 4:
     case TileValues.NUCLEAR + 4:
     case TileValues.STADIUM + 4:
-    case CASINO_CENTRE + 4:
       result = {zoneSize: 4, deltaX: 0, deltaY: -1};
       break;
 
@@ -56,7 +76,6 @@ var checkBigZone = function(tileValue) {
     case TileValues.PORT + 5:
     case TileValues.NUCLEAR + 5:
     case TileValues.STADIUM + 5:
-    case CASINO_CENTRE + 5:
       result = {zoneSize: 4, deltaX: -1, deltaY: -1};
       break;
 

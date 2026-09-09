@@ -80,6 +80,7 @@ Census.prototype.clearCensus = function() {
   this.libraryPop = 0;
   this.schoolPop = 0;
   this.casinoPop = 0;
+  this.largeParkPop = 0;
   this.stadiumPop = 0;
   this.coalPowerPop = 0;
   this.nuclearPowerPop = 0;

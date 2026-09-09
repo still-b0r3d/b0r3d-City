@@ -17,20 +17,42 @@ import { MiscUtils } from './miscUtils.js';
 
 // First slice of a floating/draggable panel abstraction meant to eventually replace
 // ModalWindow for non-blocking UI (budget, eval, etc) -- proven out here against the
-// RCI/demand graph first. Below the CSS mobile breakpoint (768px, must match
-// style.css) this deliberately does nothing: dragging and remembered position stay
-// desktop-only, so mobile keeps the drawer-based layout exactly as it is today.
+// RCI/demand graph first. On a viewport too small to float windows in, this
+// deliberately does nothing: dragging and remembered position stay a large-screen
+// feature, and small screens keep the drawer-based layout instead.
+//
+// "Too small" means either dimension, not just width. The left-hand column needs
+// ~609px of height even with every panel shrunk to its floor, so a shorter viewport
+// has panels overlapping each other however wide it is. The case that actually
+// reaches players is a phone in landscape: a big one is ~932x430, which clears the
+// width test comfortably and then has three panels fighting over 390px of column.
+// Measured there before this height clause existed: Menu covering Town Info by 71px
+// (132px in scenario mode, whose objective readout makes Town Info taller), the
+// demand graph covering the bottom 100px of Menu, and Pause/Zoom In/Zoom Out
+// unclickable underneath it. #tooSmall does not catch this: it only appears below
+// 400px.
+//
+// BOTH constants must match style.css, and the two media queries there must stay
+// exact complements: the compact one is "(max-width: 768px), (max-height: 600px)"
+// (a comma is OR), the roomy one "(min-width: 769px) and (min-height: 601px)"
+// (negating an OR needs AND). Get that wrong and there is a band of viewport sizes
+// where both apply, or neither does.
 var MOBILE_BREAKPOINT = 768;
+var SHORT_BREAKPOINT = 600;
 var STORAGE_PREFIX = 'b0r3dCityPanel_';
 
 // A shared MediaQueryList rather than a plain window 'resize' listener -- resize
 // doesn't reliably fire for every kind of viewport change (some devtools/emulator
 // viewport overrides don't dispatch it at all), where matchMedia's change event is
 // the purpose-built, more reliable signal for "did we cross this breakpoint".
-var desktopMediaQuery = window.matchMedia('(min-width: ' + (MOBILE_BREAKPOINT + 1) + 'px)');
+var roomyMediaQuery = window.matchMedia('(min-width: ' + (MOBILE_BREAKPOINT + 1) + 'px)' +
+                                        ' and (min-height: ' + (SHORT_BREAKPOINT + 1) + 'px)');
 
-function isDesktop() {
-  return desktopMediaQuery.matches;
+// True when the viewport has room to float panels at all -- big enough in BOTH
+// dimensions. Floating, dragging, resizing and the column layout are all no-ops
+// when it is false, and style.css takes over with the drawer layout instead.
+function isRoomy() {
+  return roomyMediaQuery.matches;
 }
 
 // Shared across every Panel instance so bring-to-front is a total order across all
@@ -54,12 +76,13 @@ var SNAP_THRESHOLD = 15;
 // defaultPosition: optional {left, top} used the first time this panel is ever
 // shown, before the player has dragged it anywhere -- if omitted, defaults to
 // top-centre, which is the one spot guaranteed clear of both the #leftStack column
-// and the #controls column at any width this runs at (isDesktop() gates floating on
-// a 768px minimum, well past where either sidebar reaches). Callers whose content is
+// and the #controls column at any width this runs at (isRoomy() gates floating on
+// a 769px minimum width, well past where either sidebar reaches). Callers whose
+// content is
 // wide enough to need better centring (e.g. the 500px-wide .modal windows) should
 // pass their own defaultPosition rather than rely on this fallback.
 // opts: optional {resizable, minWidth, minHeight, onResize}. resizable adds a
-// drag handle in the bottom-right corner (desktop only, same as dragging); the
+// drag handle in the bottom-right corner (large viewports only, same as dragging); the
 // panel's content is expected to be laid out so it can actually grow/shrink into
 // whatever size is picked (flex/overflow, not a fixed intrinsic size) -- see
 // rciPanel and #controls for the two panels that use this today. onResize fires
@@ -88,7 +111,7 @@ var Panel = function(id, defaultPosition, opts) {
   this._el.find('header').first().on('mousedown', this._startDrag.bind(this));
   $(document).on('mousemove', this._drag.bind(this));
   $(document).on('mouseup', this._endDrag.bind(this));
-  desktopMediaQuery.addEventListener('change', this._onBreakpointChange.bind(this));
+  roomyMediaQuery.addEventListener('change', this._onBreakpointChange.bind(this));
 
   if (this._resizable) {
     this._handle = $('<div class="panelResizeHandle"></div>');
@@ -98,7 +121,7 @@ var Panel = function(id, defaultPosition, opts) {
     $(document).on('mouseup', this._endResize.bind(this));
   }
 
-  if (isDesktop())
+  if (isRoomy())
     this._float();
 };
 
@@ -151,7 +174,7 @@ Panel.prototype.focus = function() {
 
 
 Panel.prototype._startDrag = function(e) {
-  if (!isDesktop())
+  if (!isRoomy())
     return;
 
   this.focus();
@@ -256,7 +279,7 @@ Panel.prototype._keepOnScreen = function() {
   // that way, and the sidebar panels are .initialHidden until the game reveals them
   // -- which would clamp against a zero-sized box and park them somewhere no more
   // useful. focus() and Game's reveal both re-run this once they're measurable.
-  if (!isDesktop() || !this._el.is(':visible'))
+  if (!isRoomy() || !this._el.is(':visible'))
     return;
 
   var el = this._el[0];
@@ -353,7 +376,7 @@ var shrinkColumnToFit = function(panels, top) {
 
 
 Panel.stackColumn = function() {
-  if (!isDesktop())
+  if (!isRoomy())
     return;
 
   // A panel the player has dragged or resized is out of the column altogether: it
@@ -393,10 +416,10 @@ Panel.setColumn = function(panels) {
 };
 
 
-// Crossing back onto desktop re-applies each panel's own default/remembered position
+// Crossing back onto a roomy viewport re-applies each panel's own default/remembered position
 // (see _onBreakpointChange), so the column has to be recomputed after that too.
-desktopMediaQuery.addEventListener('change', function() {
-  if (isDesktop())
+roomyMediaQuery.addEventListener('change', function() {
+  if (isRoomy())
     relayout();
 });
 
@@ -415,7 +438,7 @@ window.addEventListener('resize', function() {
 
 
 Panel.prototype._startResize = function(e) {
-  if (!isDesktop())
+  if (!isRoomy())
     return;
 
   this.focus();
@@ -459,12 +482,13 @@ Panel.prototype._endResize = function() {
 };
 
 
-// Crossing the mobile breakpoint live (narrowing/widening the window, rotating a
-// tablet) needs to hand control back and forth between panel.js's inline styles and
+// Crossing the breakpoint live -- narrowing/widening the window, but also rotating a
+// phone or tablet, which is what the height half of the query catches -- needs to
+// hand control back and forth between panel.js's inline styles and
 // style.css's drawer rules, or the panel can get stuck floating mid-drawer or vice
-// versa. Bound to desktopMediaQuery's change event above, not window resize.
+// versa. Bound to roomyMediaQuery's change event above, not window resize.
 Panel.prototype._onBreakpointChange = function() {
-  if (isDesktop()) {
+  if (isRoomy()) {
     this._float();
     this._keepOnScreen();
   } else {

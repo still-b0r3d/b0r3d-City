@@ -96,7 +96,7 @@
           <button id="fullScenarioBack" class="width140 block margin10 splashButton cancel">Back</button>
         </div>
         <div id="leftStack" class="leftedge">
-          <div id="infobar" class="alignCenter open width140 controlShadow mintcream z1 initialHidden">
+          <div id="infobar" class="alignCenter open controlShadow mintcream z1 initialHidden">
             <header class="panelHeader alignCenter">Town Info</header>
             <div class="inner padding10">
               <div class="semibold chunk">
@@ -129,39 +129,26 @@
               </div>
             </div>
           </div>
-          <div id="miscButtons" class="alignCenter open controlShadow width140 mintcream z1 initialHidden">
+          <!-- Same structure as the Tools panel below (#controls/#buttons): a flex
+               column whose body scrolls internally, so this panel can be resized and
+               shrunk by the column layout without its buttons overflowing it. The
+               per-button <div> wrappers this used to have forced block layout, and
+               .width140 + .padding10 left a 120px content box for buttons that the
+               global button rule sizes at 140px -- every one of them sat 10px proud
+               of the panel. #controls solved the same sum by being 172px wide. -->
+          <div id="miscButtons" class="alignCenter open controlShadow mintcream z1 initialHidden">
             <header class="panelHeader alignCenter">Menu</header>
-            <div class="inner padding10">
-              <div>
-                <button id="budgetRequest" class="miscButton">Budget</button>
-              </div>
-              <div>
-                <button id="evalRequest" class="miscButton">Evaluation</button>
-              </div>
-              <div>
-                <button id="disasterRequest" class="miscButton">Disasters</button>
-              </div>
-              <div>
-                <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
-              </div>
-              <div>
-                <button id="highScoreRequest" class="miscButton">High Scores</button>
-              </div>
-              <div>
-                <button id="settingsRequest" class="miscButton">Settings</button>
-              </div>
-              <div>
-                <button id="screenshotRequest" class="miscButton">Take Picture</button>
-              </div>
-              <div>
-                <button id="pauseRequest" class="miscButton">Pause</button>
-              </div>
-              <div>
-                <button id="zoomInRequest" class="miscButton">Zoom In</button>
-              </div>
-              <div>
-                <button id="zoomOutRequest" class="miscButton">Zoom Out</button>
-              </div>
+            <div id="menuButtons">
+              <button id="budgetRequest" class="miscButton">Budget</button>
+              <button id="evalRequest" class="miscButton">Evaluation</button>
+              <button id="disasterRequest" class="miscButton">Disasters</button>
+              <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
+              <button id="highScoreRequest" class="miscButton">High Scores</button>
+              <button id="settingsRequest" class="miscButton">Settings</button>
+              <button id="screenshotRequest" class="miscButton">Take Picture</button>
+              <button id="pauseRequest" class="miscButton">Pause</button>
+              <button id="zoomInRequest" class="miscButton">Zoom In</button>
+              <button id="zoomOutRequest" class="miscButton">Zoom Out</button>
             </div>
           </div>
           <div id="rciPanel" class="controlShadow mintcream z1 initialHidden">

@@ -115,10 +115,17 @@ function Game(gameMap, tileSet, snowTileSet, spriteSheet, difficulty, name) {
   // sidebars -- now every one of them is its own Panel, floating/draggable/
   // snapping just like the modal windows below. Stacked defaultPositions here
   // roughly reproduce today's at-a-glance layout for a first-time desktop player;
-  // after that, each panel's own dragged position (or size, for the two
+  // after that, each panel's own dragged position (or size, for the three
   // resizable ones) takes over via localStorage, same as the modals.
   this.infoPanel = new Panel('infobar', {left: 50, top: 40});
-  this.miscButtonsPanel = new Panel('miscButtons', {left: 50, top: 230});
+  // Resizable for the same reason #controls is: its body scrolls, so a smaller panel
+  // simply shows fewer buttons at a time rather than clipping them. It also gives
+  // shrinkColumnToFit a second panel to take space from on a short window -- before
+  // this, the demand graph was the column's only source of give, and once it hit its
+  // 100px floor the rest of the column just overlapped.
+  this.miscButtonsPanel = new Panel('miscButtons', {left: 50, top: 230}, {
+    resizable: true, minWidth: 160, minHeight: 90
+  });
   this.rciPanel = new Panel('rciPanel', {left: 50, top: 500}, {
     resizable: true, minWidth: 126, minHeight: 100, onResize: this.rci.resize.bind(this.rci)
   });

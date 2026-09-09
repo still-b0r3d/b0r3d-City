@@ -371,6 +371,13 @@ nav li {
   width: 150px;
 }
 
+/* flex: 0 0 auto on both button classes so a squeezed panel scrolls its buttons
+   rather than crushing them -- Tools and Menu are both flex columns whose body the
+   column layout is allowed to shrink (see shrinkColumnToFit in panel.js). */
+.miscButton {
+  flex: 0 0 auto;
+}
+
 .toolButton {
   width: 140px;
   flex: 0 0 auto;
@@ -432,7 +439,11 @@ nav li {
   background-color: limegreen;
 }
 
-#buttons {
+/* The scrolling body shared by the two button panels: Tools (#buttons) and Menu
+   (#menuButtons). Both hold a single column of fixed-width buttons that can run
+   taller than the panel, so both need the same flex:1/min-height:0/overflow-y
+   combination to scroll internally rather than overflowing their panel. */
+#buttons, #menuButtons {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -460,13 +471,35 @@ nav li {
   flex-direction: column;
 }
 
+/* Sized and structured to match #controls above, for the same reason: a single
+   column of 140px-wide buttons (see the global "button" rule) needs 156px of
+   content box, which .width140 + .padding10 never gave it -- every button used
+   to sit 10px proud of this panel. 172px is #controls' own width, so the two
+   button panels now read as a matched pair. Sizing/flex-direction apply on both
+   breakpoints; only display is gated below. */
+#miscButtons {
+  width: 172px;
+  max-height: calc(100vh - 80px);
+  flex-direction: column;
+}
+
+/* Town Info sits directly above Menu in the same column -- matched to its width so
+   the stack has one edge rather than two. It has no fixed-width content of its own
+   (just wrapping text), so this is purely cosmetic. #rciPanel below is deliberately
+   left narrower: its graph scales on the smaller of the two axes (see rci.js's
+   _rectSize), so widening it alone would only letterbox the graph. */
+#infobar {
+  width: 172px;
+}
+
 /* Only the flex switch needs :not(.initialHidden)/breakpoint-gating (see
    #rciPanel below for the full reasoning) -- display is the one property
    that actually competes with .initialHidden/the max-width:768px drawer
    rules on specificity; everything else above doesn't, so it can just apply
    unconditionally like the rest of this rule always did. */
-@media (min-width: 769px) {
-  #controls:not(.initialHidden) {
+@media (min-width: 769px) and (min-height: 601px) {
+  #controls:not(.initialHidden),
+  #miscButtons:not(.initialHidden) {
     display: flex;
   }
 }
@@ -589,7 +622,7 @@ nav li {
    the desktop breakpoint for the same reason as #controls above: without
    that, this would also outrank the max-width:768px block's own #rciPanel
    display rules once .initialHidden is gone, even on a phone. */
-@media (min-width: 769px) {
+@media (min-width: 769px) and (min-height: 601px) {
   #rciPanel:not(.initialHidden) {
     display: flex;
   }
@@ -970,18 +1003,35 @@ nav li {
   }
 }
 
-@media (max-width: 768px) {
-  /* Below this width the left (info/menu) and right (tools) panel stacks no longer fit
-     next to each other and the canvas -- they become toggleable overlay drawers instead
-     of always-on. #monstertv and #debug aren't included: both already manage their own
+/* THE COMPACT (DRAWER) LAYOUT.
+
+   A comma in a media query is OR, so this fires when the viewport is small in EITHER
+   dimension. It must stay the exact complement of the "(min-width: 769px) and
+   (min-height: 601px)" queries above and of roomyMediaQuery in panel.js -- negating
+   an OR needs AND, which is why those two are and-joined. If the three ever drift,
+   there is a band of viewport sizes where both layouts apply at once, or neither.
+
+   Width was the only test until 2026-09-09. A phone in landscape (~932x430) clears
+   768px easily and then has nowhere near the ~609px of height the left-hand column
+   needs, so it took the floating-panel path and stacked three panels on top of each
+   other -- see the measurements in panel.js. #tooSmall did not catch it either; that
+   only appears below 400px.
+
+   Only the rules that decide WHICH LAYOUT runs live in here. The width-driven
+   cosmetics (header trimming, 94vw dialog caps, the splash reflow) stay in the
+   max-width block further down, because a 932px-wide landscape phone doesn't need a
+   header trimmed to fit 375px. */
+@media (max-width: 768px), (max-height: 600px) {
+  /* The left (info/menu) and right (tools) panel stacks no longer fit next to each
+     other and the canvas -- they become toggleable overlay drawers instead of
+     always-on. #monstertv and #debug aren't included: both already manage their own
      show/hide independently of game start (inline style via jQuery .show()/.hide()), so
      folding them into the drawer classes here would just fight that. */
   #infobar, #miscButtons, #rciPanel, #controls {
     display: none;
   }
 
-  body.showInfoDrawer #infobar,
-  body.showInfoDrawer #miscButtons {
+  body.showInfoDrawer #infobar {
     display: block;
   }
 
@@ -989,7 +1039,8 @@ nav li {
      body) so their resizable desktop layout also works as a drawer -- display:
      block here would silently drop that flex context and let their content
      collapse or overflow unpredictably. */
-  body.showInfoDrawer #rciPanel {
+  body.showInfoDrawer #rciPanel,
+  body.showInfoDrawer #miscButtons {
     display: flex;
   }
 
@@ -997,11 +1048,53 @@ nav li {
     display: flex;
   }
 
-  /* Dragging and resizing are desktop-only (see MOBILE_BREAKPOINT in panel.js) --
-     the grip has nothing to do once a panel is a static drawer. */
+  /* Town Info + Menu + Demand stack to ~634px, which is taller than a landscape
+     phone's entire viewport (430px). Without bounding the stack to the room it
+     actually has, the bottom of it -- Zoom In, Zoom Out and the whole demand graph
+     -- simply sits below the fold with nothing to scroll. #controls needs no
+     equivalent: it already caps itself at calc(100vh - 80px) and scrolls #buttons.
+
+     Scoped to the drawer actually being open, not to #leftStack generally: with its
+     children display:none the closed container collapses to zero width and height,
+     and giving it bottom:0 unconditionally would leave a full-height invisible box
+     down the left edge of the map, swallowing clicks meant for the tiles under it. */
+  body.showInfoDrawer #leftStack {
+    bottom: 0;
+    overflow-y: auto;
+  }
+
+  /* Dragging and resizing only happen on a roomy viewport (see isRoomy in panel.js)
+     -- the grip has nothing to do once a panel is a static drawer. */
   .panelResizeHandle {
     display: none;
   }
+
+  /* The toggles that open those drawers. The #mobileDrawerToggles container is
+     always inline-block once the game reveals it; these are the buttons inside it,
+     which are display:none by default, so this rule is what actually makes the
+     drawers reachable -- it has to move with the layout rules above, or a landscape
+     phone gets hidden panels and no way to open them. */
+  .mobileDrawerToggle {
+    display: inline-block;
+  }
+}
+
+/* Dialogs are a height problem as much as a width one, and this half was previously
+   trapped in the width-only block below. A .modal is 500px wide and can be taller
+   than a 430px landscape viewport, which puts its own OK/Cancel buttons off-screen
+   with no way to reach them. dvh over vh because mobile browsers slide their address
+   bar in and out of the viewport, which vh does not track. */
+@media (max-height: 600px) {
+  .centred, #tooSmallInner, .modal {
+    max-height: 90vh;
+    max-height: 90dvh;
+    overflow-y: auto;
+  }
+}
+
+/* WIDTH-ONLY COSMETICS. Everything below is about fitting ~375-412px of real phone
+   width -- not about which layout runs, which the compact query above decides. */
+@media (max-width: 768px) {
 
   /* Trimmed from the desktop defaults (10px/20px padding, 10px margin) -- the title
      plus the 3 toggle buttons (Menu/Tools/the cancel-tool button) need to fit in
@@ -1010,7 +1103,6 @@ nav li {
      the footer, next to the b0r3d.org link (see #footerLinks), which is what actually
      fixed the wrapping rather than this trimming alone. */
   .mobileDrawerToggle {
-    display: inline-block;
     padding: 4px 6px;
     margin-left: 4px;
     font-size: 12px;

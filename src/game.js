@@ -26,6 +26,7 @@ import { GameMap } from './gameMap.js';
 import { HighScoreWindow } from './highScoreWindow.js';
 import { InfoBar } from './infoBar.js';
 import { InputStatus } from './inputStatus.js';
+import { MapWindow } from './mapWindow.js';
 import * as Messages from './messages.ts';
 import { MonsterTV } from './monsterTV.js';
 import { Notification } from './notification.js';
@@ -165,6 +166,22 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   this.evalWindow.addEventListener(Messages.EVAL_WINDOW_CLOSED, this._makeGenericCloseHandler(this.evalWindow));
   this.inputStatus.addEventListener(Messages.EVAL_REQUESTED, this.handleEvalRequest.bind(this));
 
+  // The city data map. Handed live references to the map, the simulation's blockMaps
+  // and the game canvas once, here, rather than data per open: the first two are what
+  // it renders (and are mutated in place by the sim for the life of the city), and the
+  // third is both what it draws the viewport box from and what a click on the map
+  // re-centres. Nothing to pass at open time, hence no customFn below.
+  this.mapWindow = new MapWindow(opacityLayerID, 'mapWindow');
+  this.mapWindow.setData(this.gameMap, this.simulation.blockMaps, this.gameCanvas);
+  this.mapWindow.addEventListener(Messages.MAP_WINDOW_CLOSED, this._makeGenericCloseHandler(this.mapWindow));
+  this.inputStatus.addEventListener(Messages.MAP_WINDOW_REQUESTED, this.handleMapRequest.bind(this));
+
+  // The block maps it draws are recomputed on the simulation's own schedule, so the
+  // city's clock is the honest repaint trigger -- redrawing per animation frame would
+  // burn a full 120x100 pass on data that cannot have changed. MapWindow.update() is a
+  // no-op while the window is closed, so this costs nothing the rest of the time.
+  this.simulation.addEventListener(Messages.DATE_UPDATED, this.mapWindow.update.bind(this.mapWindow));
+
   // ... and similarly for the budget window
   this.handleBudgetRequest = makeWindowOpenHandler('budget', function() {
     var budgetData = {
@@ -292,8 +309,21 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   var floatableModalIDs = [
     'budget', 'evalWindow', 'disasterWindow', 'queryWindow', 'congratsWindow',
     'saveWindow', 'screenshotLinkWindow', 'screenshotWindow', 'settingsWindow',
-    'debugWindow', 'highScoreWindow', 'touchWarnWindow'
+    'debugWindow', 'highScoreWindow', 'touchWarnWindow', 'mapWindow'
   ];
+
+  // Per-window Panel options, for the ones that want more than a drag handle. Only the
+  // map does today: it's the sole window whose content is worth making bigger (a
+  // 120x100 city at 3px a tile is legible, at 6px it's comfortable), and the only one
+  // that has to redraw to a size change rather than just reflow, hence onResize -- same
+  // arrangement as rciPanel's graph above. Floors match #mapWindow's min-width/
+  // min-height in style.css; update both together.
+  var modalPanelOptions = {
+    mapWindow: {
+      resizable: true, minWidth: 260, minHeight: 320,
+      onResize: this.mapWindow.resize.bind(this.mapWindow)
+    }
+  };
   // 500 here matches .modal's shared width in style.css -- update both together.
   var modalDefaultPosition = {
     left: Math.max(10, Math.round((window.innerWidth - 500) / 2)),
@@ -301,7 +331,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   };
   this._panelsById = {};
   floatableModalIDs.forEach(function(id) {
-    this._panelsById[id] = new Panel(id, modalDefaultPosition);
+    this._panelsById[id] = new Panel(id, modalDefaultPosition, modalPanelOptions[id]);
   }.bind(this));
 
   // Touch is a properly supported input now (zoom, pan, tap-to-place, and a mobile
@@ -789,6 +819,7 @@ Game.prototype.handleDebugRequest = makeWindowOpenHandler('debug', function() {
   return [{freeBuild: BaseTool.getFreeBuild()}];
 }.bind(this));
 Game.prototype.handleDisasterRequest = makeWindowOpenHandler('disaster');
+Game.prototype.handleMapRequest = makeWindowOpenHandler('map');
 Game.prototype.handleQueryRequest = makeWindowOpenHandler('query');
 Game.prototype.handleScreenshotRequest = makeWindowOpenHandler('screenshot');
 
@@ -1110,6 +1141,11 @@ var commonAnimate = function() {
 
   sprites = this.calculateSpritesForPaint(this.monsterTV.canvas);
   this.monsterTV.paint(sprites, this.isPaused);
+
+  // Keeps the data map's "you are here" box on the view the player is actually looking
+  // at. Only the box is repainted here, not the map data underneath it (that's
+  // DATE_UPDATED's job) -- and the whole call is a no-op while the window is closed.
+  this.mapWindow.refreshViewport();
 
   nextFrame(this.animate);
 };

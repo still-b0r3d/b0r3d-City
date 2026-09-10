@@ -140,6 +140,7 @@
             <div id="menuButtons">
               <button id="budgetRequest" class="miscButton">Budget</button>
               <button id="evalRequest" class="miscButton">Evaluation</button>
+              <button id="mapRequest" class="miscButton">City Maps</button>
               <button id="disasterRequest" class="miscButton">Disasters</button>
               <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
               <button id="highScoreRequest" class="miscButton">High Scores</button>
@@ -296,6 +297,39 @@
 	  </section>
           <form id="evalButtons" class="alignCenter margin10">
             <input type="submit" id="evalOK" class="width140 dialogOK" value="OK">
+          </form>
+        </div>
+      </div>
+      <!-- The city-wide data map (see src/mapWindow.js). Sized and laid out as a flex
+           column so Panel can resize it: #mapCanvasContainer is the one growable row,
+           and the canvas inside it is re-scaled to fit rather than having a size of its
+           own. Everything below it (legend, description, Close) keeps its natural
+           height, which is what stops a shrunk window clipping the Close button. -->
+      <!-- Hidden by an inline style rather than the .hidden class every other window
+           here uses, and this is load-bearing: ModalWindow toggles with jQuery's
+           .toggle(), which on show clears the inline display and then, if the element
+           is STILL hidden by CSS, forces display:block on it -- which would defeat the
+           flex column #mapWindow needs (see style.css). Hiding inline instead means
+           clearing it reveals the stylesheet's own display:flex, jQuery sees a visible
+           element, and it leaves the inline style empty. -->
+      <div class="modal shadow" id="mapWindow" style="display: none;">
+        <header id="mapHeader" class="mapHeader padding10 chunk alignCenter">
+           City Maps
+        </header>
+        <div id="mapContainer" class="padding10 open">
+          <div id="mapControls" class="alignCenter">
+            <label for="mapOverlaySelect">Show:</label>
+            <select id="mapOverlaySelect"></select>
+          </div>
+          <div id="mapCanvasContainer"></div>
+          <div id="mapLegend">
+            <span id="mapLegendLow"></span>
+            <div id="mapLegendBar"></div>
+            <span id="mapLegendHigh"></span>
+          </div>
+          <p id="mapDescription" class="alignCenter"></p>
+          <form id="mapButtons" class="alignCenter">
+            <input type="submit" id="mapOK" class="width140 dialogOK" value="OK">
           </form>
         </div>
       </div>

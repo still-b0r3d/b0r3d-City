@@ -566,6 +566,91 @@ nav li {
   display: none;
 }
 
+/* The city data map (src/mapWindow.js). Overrides .modal's shared 500px width with a
+   size derived from the map instead: 120x100 tiles at 3px a tile is 360x300, which is
+   the smallest the overlays are actually readable at, plus room for the chrome around
+   it. Resizable from there -- see the Panel entry in game.js -- so the whole thing is a
+   flex column with exactly one growable row (#mapCanvasContainer below).
+
+   Unconditionally display:flex, with the hiding done by an inline style in index.html
+   instead of the .hidden class -- see the comment on the element there for why that
+   swap is required rather than cosmetic. */
+#mapWindow {
+  width: 400px;
+  height: 500px;
+  min-width: 260px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+#mapContainer {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 8px;
+}
+
+#mapControls {
+  flex: 0 0 auto;
+}
+
+#mapOverlaySelect {
+  margin-left: 6px;
+  max-width: 220px;
+}
+
+/* The one row that grows and shrinks with the window. min-height:0 because a flex item
+   defaults to min-height:auto, which refuses to shrink below its content and would let
+   the canvas push the legend and OK button out of the bottom of a shrunk window. */
+#mapCanvasContainer {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #101014;
+  border: 1px solid #555;
+}
+
+/* pixelated for the same reason mapWindow.js disables imageSmoothingEnabled: the map is
+   a grid of samples blitted up from one pixel per tile, and interpolating it invents
+   gradients between blocks that the simulation never computed. Both are needed -- the
+   canvas is scaled by its own backing-store size AND, on a fractional scale, by the
+   browser's layout of it. */
+#mapCanvas {
+  display: block;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+#mapLegend {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+#mapLegendBar {
+  flex: 1 1 auto;
+  height: 10px;
+  border: 1px solid #555;
+}
+
+#mapDescription {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  min-height: 28px;
+}
+
+#mapButtons {
+  flex: 0 0 auto;
+}
+
 #monstertv {
   position: absolute;
   top: 364px;
@@ -796,6 +881,11 @@ nav li {
 
 #evalRequest, #evalHeader {
   background-color: forestgreen;
+  color: white;
+}
+
+#mapRequest, #mapHeader {
+  background-color: darkcyan;
   color: white;
 }
 

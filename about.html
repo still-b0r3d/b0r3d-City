@@ -48,6 +48,9 @@
           Everything below shipped after the version above went out. Newest first.
         </p>
         <ul>
+          <li><strong>Zombies.</strong> A new disaster, and the only one in the game that doesn't leave you rebuilding. The Zombies scenario was quietly using the monster all this time&mdash;now it has the real thing. A horde shambles in from the edges of the map and heads for the middle of town, and wherever they are, nobody wants to live: land value falls, zones start emptying out, and crime climbs. Nothing is flattened, though, and it all comes back once they're dealt with. Police stations are the answer&mdash;a zombie in a well-covered neighbourhood doesn't last anything like as long as one nobody's watching. Watch an outbreak happen on the Land Value and Crime maps.</li>
+          <li><strong>Graphs.</strong> Ten and a hundred years of your city's history: residential, commercial and industrial population, crime, pollution and cash flow, each one you can switch on or off. All of it was already being recorded&mdash;and saved with your city&mdash;there was just never anywhere to look at it.</li>
+          <li><strong>Speed controls.</strong> Pause, Slow, Medium and Fast, in the Menu panel. The speeds were always in there; the button just never offered more than stop and go.</li>
           <li><strong>City Maps&mdash;a whole-city view, with eleven overlays.</strong> Population density, land value, crime, pollution, traffic, rate of growth, police and fire coverage, the land-value bonus from your civic buildings, and the power grid. All of that was already being worked out under the hood every tick&mdash;it's what decides whether your zones grow or rot&mdash;and until now there was no way to <em>look</em> at any of it except the Query tool, one tile at a time. It's also the fastest way around: click anywhere on it to jump the view there, and the box shows you where you're currently standing.</li>
           <li><strong>Startup is about eight times faster&mdash;first load went from roughly 13 seconds to under two.</strong> The game shipped two tile sheets and only ever drew from one. The second was downloaded, decoded and cut into a thousand-odd separate images on every single launch, and then never painted. It's gone.</li>
           <li><strong>Nine more civic buildings:</strong> Arcade, Museum, University, Data Centre, Rukus, Amusement Park, Megamart, Bar and Burger Baron. The Bar, Burger Baron and Arcade are the cheap, small routes to commercial demand; the Amusement Park and Megamart are the expensive, high-pull ones. The University is the School's heavyweight counterpart&mdash;one is worth six of them, in a fraction of the space. The Museum raises nearby land value harder than anything else you can build, Hospital included, and the Data Centre is the first building in the game that pushes <em>industrial</em> demand; nothing did before. And Rukus is <a href="https://b0r3d.org/rukus.html">the cat</a>, as a civic monument.</li>
@@ -127,7 +130,11 @@
         </p>
         <h3 class="alignCenter chunk">Getting Around</h3>
         <p>
-          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around.
+          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around. Time has its own controls in the Menu panel: Pause, Slow, Medium and Fast. Slow gives you room to react while a city is small or a disaster is unfolding; Fast is for watching a decade go by.
+        </p>
+        <h3 class="alignCenter chunk">Graphs</h3>
+        <p>
+          Menu &rarr; Graphs plots your city's history: residential, commercial and industrial population, plus crime, pollution and cash flow. Tick whichever you want to see. Two ranges&mdash;the last ten years, month by month, or the last hundred at a coarser grain. R, C and I share the left-hand scale, so you can read them against each other and see which way your economy is leaning; crime, pollution and cash flow share the right-hand one, and cash flow is breaking even on the dashed line, not at the bottom. All of this has been quietly recorded (and saved with your city) since the beginning&mdash;there was just never anywhere to look at it.
         </p>
         <h3 class="alignCenter chunk">City Maps</h3>
         <p>
@@ -138,7 +145,7 @@
         </p>
         <h3 class="alignCenter chunk">Windows</h3>
         <p>
-          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Demand graph, Tools and City Maps windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
+          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Demand graph, Tools, City Maps and Graphs windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
         </p>
         <h3 class="alignCenter chunk">Saving Your City</h3>
         <p>
@@ -155,6 +162,7 @@
           <li><strong>Monster:</strong> Is it a bird? Is it a plane? Well, it's big, red and scary, so I'm not waiting to find out!</li>
           <li><strong>Plane crash:</strong> What goes up...</li>
           <li><strong>Tornado:</strong> Your citizens won't want to watch <cite>Twister</cite> on NetFlix for a while</li>
+          <li><strong>Zombies:</strong> The odd one out&mdash;they don't knock anything down. A horde wanders in from the edges of the map and heads for the middle of town, and every block they're standing in becomes somewhere nobody wants to live: land value drops, crime climbs, and zones start emptying out. Put police stations in their way and they don't last long. Everything recovers once they're gone, which is more than can be said for the reactor.</li>
         </ul>
         <h3 class="alignCenter chunk">Settings</h3>
         <p>

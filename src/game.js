@@ -23,6 +23,7 @@ import { DisasterWindow } from './disasterWindow.js';
 import { EvaluationWindow } from './evaluationWindow.js';
 import { GameCanvas } from './gameCanvas.js';
 import { GameMap } from './gameMap.js';
+import { GraphWindow } from './graphWindow.js';
 import { HighScoreWindow } from './highScoreWindow.js';
 import { InfoBar } from './infoBar.js';
 import { InputStatus } from './inputStatus.js';
@@ -182,6 +183,17 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   // no-op while the window is closed, so this costs nothing the rest of the time.
   this.simulation.addEventListener(Messages.DATE_UPDATED, this.mapWindow.update.bind(this.mapWindow));
 
+  // The city history graph. Same arrangement as the map: one live reference to the
+  // census, whose history arrays are rotated in place, and a repaint on the city's
+  // clock. The 10-year series takes a reading every month, which is exactly what
+  // DATE_UPDATED fires on, so this is the right cadence rather than an approximation
+  // of one -- and, like the map, it's a no-op while the window is closed.
+  this.graphWindow = new GraphWindow(opacityLayerID, 'graphWindow');
+  this.graphWindow.setData(this.simulation.getCensus());
+  this.graphWindow.addEventListener(Messages.GRAPH_WINDOW_CLOSED, this._makeGenericCloseHandler(this.graphWindow));
+  this.inputStatus.addEventListener(Messages.GRAPH_WINDOW_REQUESTED, this.handleGraphRequest.bind(this));
+  this.simulation.addEventListener(Messages.DATE_UPDATED, this.graphWindow.update.bind(this.graphWindow));
+
   // ... and similarly for the budget window
   this.handleBudgetRequest = makeWindowOpenHandler('budget', function() {
     var budgetData = {
@@ -265,8 +277,8 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   // Listen for tool clicks
   this.inputStatus.addEventListener(Messages.TOOL_CLICKED, this.handleTool.bind(this));
 
-  // And pauses
-  this.inputStatus.addEventListener(Messages.SPEED_CHANGE, this.handlePause.bind(this));
+  // And the speed control
+  this.inputStatus.addEventListener(Messages.SPEED_SET_REQUESTED, this.handleSpeedSet.bind(this));
 
   this.infoBar = InfoBar('cclass', 'population', 'score', 'funds', 'date', 'name');
   var initialValues = {
@@ -309,7 +321,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   var floatableModalIDs = [
     'budget', 'evalWindow', 'disasterWindow', 'queryWindow', 'congratsWindow',
     'saveWindow', 'screenshotLinkWindow', 'screenshotWindow', 'settingsWindow',
-    'debugWindow', 'highScoreWindow', 'touchWarnWindow', 'mapWindow'
+    'debugWindow', 'highScoreWindow', 'touchWarnWindow', 'mapWindow', 'graphWindow'
   ];
 
   // Per-window Panel options, for the ones that want more than a drag handle. Only the
@@ -322,6 +334,10 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
     mapWindow: {
       resizable: true, minWidth: 260, minHeight: 320,
       onResize: this.mapWindow.resize.bind(this.mapWindow)
+    },
+    graphWindow: {
+      resizable: true, minWidth: 300, minHeight: 280,
+      onResize: this.graphWindow.resize.bind(this.graphWindow)
     }
   };
   // 500 here matches .modal's shared width in style.css -- update both together.
@@ -497,6 +513,19 @@ Game.prototype.revealControls = function() {
 
  this._notificationBar.news({subject: Messages.WELCOME});
  this.rci.update({residential: 750, commercial: 750, industrial: 750});
+
+ // Loading a save restores whatever speed it was saved at (Simulation's _speed is in
+ // its saveProps), so the segmented control is synced from the simulation rather than
+ // assumed to be on the constructor's default -- and defaultSpeed, which is what Pause
+ // resumes to, follows it for the same reason. A paused save is the case that would
+ // show: without this, the buttons say Medium over a city that isn't moving.
+ var loadedSpeed = this.simulation.getSpeed();
+ if (loadedSpeed === Simulation.SPEED_PAUSED)
+   this.isPaused = true;
+ else
+   this.defaultSpeed = loadedSpeed;
+
+ this._updateSpeedButtons();
 };
 
 
@@ -624,6 +653,10 @@ Game.prototype.handleDisasterWindowClosure = function(request) {
 
     case DisasterWindow.DISASTER_TORNADO:
       this.simulation.spriteManager.makeTornado();
+      break;
+
+    case DisasterWindow.DISASTER_ZOMBIES:
+      this.simulation.spriteManager.makeZombies();
   }
 };
 
@@ -709,6 +742,10 @@ Game.prototype.cheatTriggerDisaster = function(name) {
 
     case 'monster':
       this.simulation.spriteManager.makeMonster();
+      break;
+
+    case 'zombies':
+      this.simulation.spriteManager.makeZombies();
       break;
 
     default:
@@ -819,6 +856,7 @@ Game.prototype.handleDebugRequest = makeWindowOpenHandler('debug', function() {
   return [{freeBuild: BaseTool.getFreeBuild()}];
 }.bind(this));
 Game.prototype.handleDisasterRequest = makeWindowOpenHandler('disaster');
+Game.prototype.handleGraphRequest = makeWindowOpenHandler('graph');
 Game.prototype.handleMapRequest = makeWindowOpenHandler('map');
 Game.prototype.handleQueryRequest = makeWindowOpenHandler('query');
 Game.prototype.handleScreenshotRequest = makeWindowOpenHandler('screenshot');
@@ -899,10 +937,20 @@ Game.prototype.handleHighScoreRequest = function() {
 };
 
 
+// The names inputStatus.js's speed buttons emit, mapped to the constants Simulation
+// actually wants. Kept here rather than there so the SPEED_* values stay owned by the
+// one module that defines them.
+var SPEED_BY_NAME = {
+  slow: Simulation.SPEED_SLOW,
+  med: Simulation.SPEED_MED,
+  fast: Simulation.SPEED_FAST
+};
+
+
+// Toggles pause. Still its own method (rather than folded into handleSpeedSet) because
+// two other callers want exactly this and nothing else: scenarioController.js pauses on
+// win/lose, and the Main Menu button pauses the city while it asks for confirmation.
 Game.prototype.handlePause = function() {
-  // XXX Currently only offer pause and run to the user
-  // No real difference among the speeds until we optimise
-  // the sim
   this.isPaused = !this.isPaused;
 
   if (this.isPaused)
@@ -910,12 +958,47 @@ Game.prototype.handlePause = function() {
   else
     this.simulation.setSpeed(this.defaultSpeed);
 
-  // The button's label is derived from the real paused state here, rather than
-  // toggled inside inputStatus.js's click handler, so that it stays honest when
-  // something other than a click pauses the game -- scenarioController.js pauses on
-  // win/lose, which used to leave the button still reading "Pause" over an already
-  // paused city, and one more click to "resume" would pause it a second time.
-  $('#pauseRequest').text(this.isPaused ? 'Play' : 'Pause');
+  this._updateSpeedButtons();
+};
+
+
+// The four speed buttons. Pause is a toggle so that clicking it a second time resumes
+// -- the behaviour the old single Pause button had, which would otherwise be lost to a
+// segmented control where the selected segment is inert. The other three set the speed
+// and unpause together, so picking a speed from a paused city just starts it at that
+// speed rather than needing two clicks.
+//
+// defaultSpeed is the player's chosen running speed, and is what pause resumes to.
+Game.prototype.handleSpeedSet = function(speedName) {
+  if (speedName === 'pause') {
+    this.handlePause();
+    return;
+  }
+
+  var speed = SPEED_BY_NAME[speedName];
+  if (speed === undefined)
+    return;
+
+  this.defaultSpeed = speed;
+  this.isPaused = false;
+  this.simulation.setSpeed(speed);
+  this._updateSpeedButtons();
+};
+
+
+// Which segment reads as selected, derived from the real simulation state rather than
+// tracked alongside it. The old Pause button's label was set the same way and for the
+// same reason: something other than a click can change the speed (scenarioController
+// pauses on win/lose, and loading a save restores whatever speed it was saved at), and
+// a control that tracked its own state would drift out of step with the city.
+Game.prototype._updateSpeedButtons = function() {
+  var speed = this.simulation.getSpeed();
+  var selected = speed === Simulation.SPEED_PAUSED ? '#speedPauseBtn' :
+                 speed === Simulation.SPEED_SLOW ? '#speedSlowBtn' :
+                 speed === Simulation.SPEED_FAST ? '#speedFastBtn' : '#speedMedBtn';
+
+  $('.speedButton').removeClass('speedSelected');
+  $(selected).addClass('speedSelected');
 };
 
 

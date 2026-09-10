@@ -200,6 +200,7 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
   var pollutionDensityMap = blockMaps.pollutionDensityMap;
   var crimeRateMap = blockMaps.crimeRateMap;
   var civicBuildingMap = blockMaps.civicBuildingMap;
+  var zombieMap = blockMaps.zombieMap;
 
   var x, y, width, height;
 
@@ -261,6 +262,15 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
         // civicBuildingMap has a coarser chunk size (8) than landValueMap (2) -- worldGet
         // handles that scale difference the same way getCityCentreDistance does above.
         landValue += Math.floor(civicBuildingMap.worldGet(worldX, worldY) / 20);
+
+        // ... and a horde shambling down the street is the exact opposite of a Library.
+        // Deliberately the mirror image of the line above, same chunk size and same
+        // divisor: this is the whole of what a zombie does to the city (see
+        // zombieSprite.js). Everything else -- zones decaying because residential.js
+        // grows on land value, crime climbing because crimeScan computes it from
+        // 128 minus land value -- follows from this one subtraction, through the
+        // simulation's own arithmetic rather than around it.
+        landValue -= Math.floor(zombieMap.worldGet(worldX, worldY) / 20);
 
         // Clamp in range 1-250 (0 represents undeveloped land)
         landValue = MiscUtils.clamp(landValue, 1, 250);

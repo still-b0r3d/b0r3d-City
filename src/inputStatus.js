@@ -136,8 +136,17 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   $('#budgetRequest').click(budgetHandler.bind(this));
   $('#evalRequest').click(evalHandler.bind(this));
   $('#mapRequest').click(mapHandler.bind(this));
+  $('#graphRequest').click(graphHandler.bind(this));
   $('#disasterRequest').click(disasterHandler.bind(this));
-  $('#pauseRequest').click(this.speedChangeHandler.bind(this));
+  // The four speed buttons all emit the same message, carrying a name rather than a
+  // Simulation.SPEED_* value: game.js already imports Simulation and does the mapping,
+  // so the constants stay owned in one place instead of being copied in here as four
+  // magic numbers. Game also decides what each one means -- Pause is a toggle, the
+  // other three just set a speed.
+  $('#speedPauseBtn').click(makeSpeedHandler('pause').bind(this));
+  $('#speedSlowBtn').click(makeSpeedHandler('slow').bind(this));
+  $('#speedMedBtn').click(makeSpeedHandler('med').bind(this));
+  $('#speedFastBtn').click(makeSpeedHandler('fast').bind(this));
   $('#screenshotRequest').click(screenshotHandler.bind(this));
   $('#settingsRequest').click(settingsHandler.bind(this));
   $('#saveRequest').click(saveHandler.bind(this));
@@ -648,14 +657,6 @@ var toolButtonHandler = function(e) {
 };
 
 
-// Just reports the click. The button's label used to be flipped here too, which made
-// the label and the actual paused state two separate sources of truth that could (and
-// did) drift apart -- Game owns both now, and relabels from the real state.
-InputStatus.prototype.speedChangeHandler = function(e) {
-  this._emitEvent(Messages.SPEED_CHANGE);
-};
-
-
 InputStatus.prototype.clearTool = function() {
   if (this.toolName === 'query') {
     $(this.canvasID).removeClass('helpPointer');
@@ -731,6 +732,17 @@ var debugHandler = makeHandler('DEBUG_WINDOW_REQUESTED');
 var disasterHandler = makeHandler('DISASTER_REQUESTED');
 var evalHandler = makeHandler('EVAL_REQUESTED');
 var mapHandler = makeHandler('MAP_WINDOW_REQUESTED');
+var graphHandler = makeHandler('GRAPH_WINDOW_REQUESTED');
+
+
+// Same shape as makeHandler above, but carrying which of the four speed buttons was
+// pressed. Kept separate rather than generalising makeHandler, since it's the only
+// message here that has a payload at all.
+var makeSpeedHandler = function(speedName) {
+  return function(e) {
+    this._emitEvent(Messages.SPEED_SET_REQUESTED, speedName);
+  };
+};
 var screenshotHandler = makeHandler('SCREENSHOT_WINDOW_REQUESTED');
 var settingsHandler = makeHandler('SETTINGS_WINDOW_REQUESTED');
 var saveHandler = makeHandler('SAVE_REQUESTED');

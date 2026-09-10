@@ -25,6 +25,12 @@ import { SpriteUtils } from './spriteUtils.js';
 import { CHANNEL, RIVER } from "./tileValues.ts";
 import { TornadoSprite } from './tornadoSprite.js';
 import { TrainSprite } from './trainSprite.js';
+import { ZombieSprite } from './zombieSprite.js';
+
+// Zombies arrive as a wave; this is how many when nobody says otherwise. Sized so a
+// horde reads as a crowd converging on the city rather than a handful of strays, while
+// staying well inside what the sprite loop paints comfortably.
+var DEFAULT_HORDE_SIZE = 12;
 
 var SpriteManager = EventEmitter(function(map) {
   this.spriteList = [];
@@ -269,6 +275,48 @@ SpriteManager.prototype.makeMonster = function() {
 };
 
 
+SpriteManager.prototype.makeZombieAt = function(x, y) {
+  var sprite = this.makeSprite(SpriteConstants.SPRITE_ZOMBIE,
+                  SpriteUtils.worldToPix(x),
+                  SpriteUtils.worldToPix(y));
+  this._emitEvent(Messages.ZOMBIE_SIGHTED, {trackable: true, x: x, y: y, sprite: sprite});
+};
+
+
+// A wave, not a single zombie -- one shambler is a curiosity, and the threat is that
+// there are a lot of them. They come in off the edges of the map rather than rising out
+// of the city (the monster's spawn rule is the opposite: it comes up out of the river),
+// so a player watching the map sees the horde arrive from outside and converge on the
+// centre of town.
+//
+// Only the first one is announced. Emitting ZOMBIE_SIGHTED per zombie would fire the
+// notification bar and MonsterTV a dozen times in one frame, each replacing the last.
+SpriteManager.prototype.makeZombies = function(count) {
+  count = count || DEFAULT_HORDE_SIZE;
+
+  for (var i = 0; i < count; i++) {
+    var x, y;
+
+    // Pick an edge, then a position along it.
+    if (Random.getRandom(1) === 0) {
+      x = Random.getRandom(1) === 0 ? 0 : this.map.width - 1;
+      y = Random.getRandom(this.map.height - 1);
+    } else {
+      x = Random.getRandom(this.map.width - 1);
+      y = Random.getRandom(1) === 0 ? 0 : this.map.height - 1;
+    }
+
+    if (i === 0) {
+      this.makeZombieAt(x, y);
+      continue;
+    }
+
+    this.makeSprite(SpriteConstants.SPRITE_ZOMBIE,
+                    SpriteUtils.worldToPix(x), SpriteUtils.worldToPix(y));
+  }
+};
+
+
 SpriteManager.prototype.pruneDeadSprites = function(type) {
   this.spriteList = this.spriteList.filter(function (s) {
     return s.frame !== 0;
@@ -284,6 +332,7 @@ constructors[SpriteConstants.SPRITE_HELICOPTER] = CopterSprite;
 constructors[SpriteConstants.SPRITE_AIRPLANE] = AirplaneSprite;
 constructors[SpriteConstants.SPRITE_TORNADO] = TornadoSprite;
 constructors[SpriteConstants.SPRITE_EXPLOSION] = ExplosionSprite;
+constructors[SpriteConstants.SPRITE_ZOMBIE] = ZombieSprite;
 
 
 export { SpriteManager };

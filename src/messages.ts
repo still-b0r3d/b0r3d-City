@@ -57,9 +57,13 @@ export const PLANE_CRASHED = "Plane crashed";
 export const POLICE_NEEDS_FUNDING = "Police need funding";
 export const POPULATION_UPDATED = "Population updated";
 export const QUERY_WINDOW_CLOSED = "Query window closed";
+export const GRAPH_WINDOW_REQUESTED = "Graph window requested";
+export const GRAPH_WINDOW_CLOSED = "Graph window closed";
 export const MAIN_MENU_REQUESTED = "Main menu requested";
 export const MAP_WINDOW_REQUESTED = "Map window requested";
 export const MAP_WINDOW_CLOSED = "Map window closed";
+export const SPEED_SET_REQUESTED = "Speed set requested";
+export const ZOMBIE_SIGHTED = "Zombies!";
 export const QUERY_WINDOW_NEEDED = "Query window needed";
 export const REACHED_CAPITAL = "Now a capital";
 export const REACHED_CITY = "Now a city";
@@ -84,7 +88,6 @@ export const SOUND_EXPLOSIONLOW = "Explosion! Bang!";
 export const SOUND_HEAVY_TRAFFIC = "Heavy Traffic sound";
 export const SOUND_HONKHONK = "HonkHonk sound";
 export const SOUND_MONSTER = "Monster sound";
-export const SPEED_CHANGE = "Speed change";
 export const SPRITE_DYING = "Sprite dying";
 export const SPRITE_MOVED = "Sprite move";
 export const TAX_TOO_HIGH = "Tax too high";
@@ -104,6 +107,7 @@ export const DISASTER_MESSAGES = [
   MONSTER_SIGHTED,
   NUCLEAR_MELTDOWN,
   TORNADO_SIGHTED,
+  ZOMBIE_SIGHTED,
 ];
 
 export const CRASHES = [

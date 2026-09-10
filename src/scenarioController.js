@@ -151,6 +151,13 @@ ScenarioController.prototype._triggerDisaster = function() {
     case 'monsterWaves':
       simulation.spriteManager.makeMonster();
       break;
+
+    // The Zombies scenario used to be listed under monsterWaves above, which meant the
+    // thing arriving every five years was Godzilla with a different name on the splash
+    // screen. It has its own disaster now -- see zombieSprite.js.
+    case 'zombieWaves':
+      simulation.spriteManager.makeZombies();
+      break;
   }
 };
 
@@ -173,9 +180,13 @@ ScenarioController.prototype._onDateUpdated = function(date) {
   var yearsElapsed = date.year - this.scenario.year;
   var disaster = this.scenario.disaster;
 
-  // Recurring waves (Zombies): DATE_UPDATED fires every month, so only
-  // re-trigger on the year boundary, and only once for any given year.
-  if (disaster && disaster.type === 'monsterWaves' && date.month === 0 &&
+  // Recurring waves (Zombies): DATE_UPDATED fires every month, so only re-trigger on
+  // the year boundary, and only once for any given year. Any disaster type ending in
+  // "Waves" recurs -- keeps monsterWaves working for anything that still wants it while
+  // zombieWaves gets the same treatment without a second condition here.
+  var recurring = disaster && /Waves$/.test(disaster.type);
+
+  if (recurring && date.month === 0 &&
       yearsElapsed > 0 && yearsElapsed % disaster.everyYears === 0 &&
       this._lastWaveYear !== date.year) {
     this._lastWaveYear = date.year;

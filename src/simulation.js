@@ -112,6 +112,15 @@ var Simulation = EventEmitter(function (gameMap, gameLevel, speed, savedGame) {
     // Scores the volume of traffic in this cluster, range 0-240
     trafficDensityMap: new BlockMap(this._map.width, this._map.height, 2),
 
+    // How badly a neighbourhood is currently overrun, range 0-600 -- see
+    // zombieSprite.js, which is the only thing that writes to it, and
+    // pollutionTerrainLandValueScan, which subtracts it from land value the same way it
+    // adds civicBuildingMap. Chunk size 8 to match civicBuildingMap: a zombie is a
+    // problem for a neighbourhood, not for one 2x2 block of it. Unlike every other map
+    // here it isn't rebuilt from scratch by a scan, so it decays instead -- see
+    // _clearCensus below.
+    zombieMap: new BlockMap(this._map.width, this._map.height, 8),
+
     // Temporary maps
     tempMap1: new BlockMap(this._map.width, this._map.height, 2),
     tempMap2: new BlockMap(this._map.width, this._map.height, 2),
@@ -154,6 +163,22 @@ Simulation.prototype.setSpeed = function(s) {
 
 Simulation.prototype.isPaused = function() {
   return this._speed === Simulation.SPEED_PAUSED;
+};
+
+
+// The current speed, for the Menu panel's segmented speed control to read back. It
+// derives which segment is selected from this rather than from its own state, since
+// _speed is restored from a save and changed by scenarioController's win/lose pause.
+Simulation.prototype.getSpeed = function() {
+  return this._speed;
+};
+
+
+// The census, for graphWindow.js. Public accessor rather than reaching into _census
+// directly, since the history arrays it plots are rotated in place and the window
+// holds the reference for the life of the city.
+Simulation.prototype.getCensus = function() {
+  return this._census;
 };
 
 
@@ -237,12 +262,34 @@ Simulation.prototype._simFrame = function() {
 };
 
 
+// How much of the zombie dread in a block survives each cycle. The three maps cleared
+// outright above are all rebuilt from scratch by the following map scan, which counts
+// the buildings that feed them; zombieMap has no scan behind it, because what writes to
+// it is a sprite that has usually stopped existing by the time the effect should end.
+// Decaying rather than clearing is also the behaviour that's actually wanted: a
+// neighbourhood the horde has walked through stays a bad address for a while afterwards
+// and then recovers, instead of snapping back the instant the last one falls over.
+var ZOMBIE_DREAD_DECAY = 0.92;
+
 Simulation.prototype._clearCensus = function() {
   this._census.clearCensus();
   this._powerManager.clearPowerStack();
   this.blockMaps.fireStationMap.clear();
   this.blockMaps.policeStationMap.clear();
   this.blockMaps.civicBuildingMap.clear();
+
+  var zombieMap = this.blockMaps.zombieMap;
+  for (var x = 0; x < zombieMap.width; x++) {
+    for (var y = 0; y < zombieMap.height; y++) {
+      var value = zombieMap.get(x, y);
+      if (value === 0)
+        continue;
+
+      // Floor, so it actually reaches zero rather than approaching it forever and
+      // leaving every block the horde ever touched permanently a point or two down.
+      zombieMap.set(x, y, value < 8 ? 0 : Math.floor(value * ZOMBIE_DREAD_DECAY));
+    }
+  }
 };
 
 

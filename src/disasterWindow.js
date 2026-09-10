@@ -62,6 +62,7 @@ DisasterWindow.prototype.open = function() {
   $('#disasterCrash').attr('value', DisasterWindow.DISASTER_CRASH);
   $('#disasterMeltdown').attr('value', DisasterWindow.DISASTER_MELTDOWN);
   $('#disasterTornado').attr('value', DisasterWindow.DISASTER_TORNADO);
+  $('#disasterZombies').attr('value', DisasterWindow.DISASTER_ZOMBIES);
 
   this._toggleDisplay();
 };
@@ -74,7 +75,8 @@ Object.defineProperties(DisasterWindow,
    DISASTER_FLOOD: MiscUtils.makeConstantDescriptor('Flood'),
    DISASTER_CRASH: MiscUtils.makeConstantDescriptor('Crash'),
    DISASTER_MELTDOWN: MiscUtils.makeConstantDescriptor('Meltdown'),
-   DISASTER_TORNADO: MiscUtils.makeConstantDescriptor('Tornado')});
+   DISASTER_TORNADO: MiscUtils.makeConstantDescriptor('Tornado'),
+   DISASTER_ZOMBIES: MiscUtils.makeConstantDescriptor('Zombies')});
 
 
 export { DisasterWindow };

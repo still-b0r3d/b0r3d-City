@@ -18,3 +18,9 @@ export const SPRITE_SHIP = 4;
 export const SPRITE_MONSTER = 5;
 export const SPRITE_TORNADO = 6;
 export const SPRITE_EXPLOSION = 7;
+
+// b0r3d-city's own. 8 is not a new row on the sprite sheet: it is the row the original
+// engine's bus occupied, which micropolisJS never implemented (there has never been a
+// SPRITE_BUS constant or a constructor for one), so the art there was dormant and the
+// sheet needs no growing. See src/zombieSprite.js.
+export const SPRITE_ZOMBIE = 8;

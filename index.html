@@ -141,12 +141,25 @@
               <button id="budgetRequest" class="miscButton">Budget</button>
               <button id="evalRequest" class="miscButton">Evaluation</button>
               <button id="mapRequest" class="miscButton">City Maps</button>
+              <button id="graphRequest" class="miscButton">Graphs</button>
               <button id="disasterRequest" class="miscButton">Disasters</button>
               <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
               <button id="highScoreRequest" class="miscButton">High Scores</button>
               <button id="settingsRequest" class="miscButton">Settings</button>
               <button id="screenshotRequest" class="miscButton">Take Picture</button>
-              <button id="pauseRequest" class="miscButton">Pause</button>
+              <!-- A segmented speed control, replacing the old single Pause toggle. The
+                   simulation has always supported four speeds (see Simulation's
+                   SPEED_PAUSED/SLOW/MED/FAST and the threshold switch in _simFrame),
+                   and the Settings window has always exposed them, but the in-game
+                   button only ever offered stop and go. Four small buttons on one row
+                   rather than four full-width miscButtons, since the Menu panel's
+                   height is contended -- see Panel.setColumn's shrinkColumnToFit. -->
+              <div id="speedControls" role="group" aria-label="Simulation speed">
+                <button id="speedPauseBtn" class="speedButton" title="Pause">Pause</button>
+                <button id="speedSlowBtn" class="speedButton" title="Slow">Slow</button>
+                <button id="speedMedBtn" class="speedButton" title="Medium">Med</button>
+                <button id="speedFastBtn" class="speedButton" title="Fast">Fast</button>
+              </div>
               <button id="zoomInRequest" class="miscButton">Zoom In</button>
               <button id="zoomOutRequest" class="miscButton">Zoom Out</button>
               <!-- Last in the list, and ruled off above, because it is the one button
@@ -333,6 +346,23 @@
           </form>
         </div>
       </div>
+      <!-- The city history graph (see src/graphWindow.js). Same flex-column-with-one-
+           growable-row shape as #mapWindow above, and hidden the same inline way for the
+           same reason -- see the comment on that element. -->
+      <div class="modal shadow" id="graphWindow" style="display: none;">
+        <header id="graphHeader" class="graphHeader padding10 chunk alignCenter">
+           Graphs
+        </header>
+        <div id="graphContainer" class="padding10 open">
+          <div id="graphRange" class="alignCenter"></div>
+          <div id="graphCanvasContainer"></div>
+          <div id="graphLegend"></div>
+          <p id="graphAxisNote" class="alignCenter">Left axis: zone population &mdash; R, C and I share one scale, so they can be read against each other. Right axis: crime, pollution and cash flow (0&ndash;255; cash flow breaks even on the dashed line).</p>
+          <form id="graphButtons" class="alignCenter">
+            <input type="submit" id="graphOK" class="width140 dialogOK" value="OK">
+          </form>
+        </div>
+      </div>
       <div class="hidden modal shadow" id="disasterWindow">
         <header id="disasterHeader" class="disasterHeader padding10 chunk alignCenter">
            Disasters
@@ -349,6 +379,7 @@
                 <option id="disasterCrash" value="Crash">Crash</option>
                 <option id="disasterMeltdown" value="Meltdown">Meltdown</option>
                 <option id="disasterTornado" value="Tornado">Tornado</option>
+                <option id="disasterZombies" value="Zombies">Zombies</option>
               </select>
             </div>
             <div id="disasterButtons" class="alignCenter margin10">
@@ -542,6 +573,7 @@
               <button type="button" class="cheatDisasterButton" data-disaster="flood">Flood</button>
               <button type="button" class="cheatDisasterButton" data-disaster="tornado">Tornado</button>
               <button type="button" class="cheatDisasterButton" data-disaster="monster">Monster</button>
+              <button type="button" class="cheatDisasterButton" data-disaster="zombies">Zombies</button>
               <button type="button" class="cheatDisasterButton" data-disaster="meltdown">Meltdown</button>
               <button type="button" class="cheatDisasterButton" data-disaster="crash">Crash</button>
             </div>

@@ -13,6 +13,11 @@
 
 import { MiscUtils } from './miscUtils.js';
 
+// How many readings each history array holds. Exported because graphWindow.js plots
+// against it, and because Census.load falls back to it for saves written before the
+// fill counters existed.
+var HISTORY_LENGTH = 120;
+
 var arrs = ['res', 'com', 'ind', 'crime',
             'money', 'pollution'];
 function Census() {
@@ -29,7 +34,7 @@ function Census() {
 
   var createArray = function(arrName) {
     this[arrName] = [];
-    for (var a = 0; a < 120; a++)
+    for (var a = 0; a < HISTORY_LENGTH; a++)
       this[arrName][a] = 0;
   };
 
@@ -39,6 +44,15 @@ function Census() {
     createArray.call(this, name10);
     createArray.call(this, name120);
   }
+
+  // How many of the 120 slots in each set of arrays hold a real reading rather than
+  // the zero they were initialised to. The arrays themselves can't answer this -- a
+  // genuine reading of 0 (no commercial population yet, say) is indistinguishable
+  // from an unfilled slot -- and graphWindow.js needs it, or a city three years old
+  // plots as seven years of flat zero before its actual history, which reads as a bug
+  // rather than as "there is no history here yet".
+  this.histCount10 = 0;
+  this.histCount120 = 0;
 }
 
 
@@ -101,7 +115,7 @@ Census.prototype.clearCensus = function() {
 var saveProps = ['resPop', 'comPop', 'indPop', 'crimeRamp', 'pollutionRamp', 'landValueAverage', 'pollutionAverage',
              'crimeAverage', 'totalPop', 'resHist10', 'resHist120', 'comHist10', 'comHist120', 'indHist10',
              'indHist120', 'crimeHist10', 'crimeHist120', 'moneyHist10', 'moneyHist120', 'pollutionHist10',
-             'pollutionHist120'];
+             'pollutionHist120', 'histCount10', 'histCount120'];
 
 Census.prototype.save = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)
@@ -112,6 +126,17 @@ Census.prototype.save = function(saveData) {
 Census.prototype.load = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)
     this[saveProps[i]] = saveData[saveProps[i]];
+
+  // The two counters were added alongside the graph window, so saves written before
+  // that don't carry them. Their history is real and worth plotting, and there's no
+  // way to recover how much of it is genuine after the fact, so those saves are
+  // treated as having a full set -- which is exactly the whole-array plot they'd have
+  // got if the counters had never existed. Only affects pre-existing saves; anything
+  // saved from here on carries the true count.
+  if (typeof this.histCount10 !== 'number')
+    this.histCount10 = HISTORY_LENGTH;
+  if (typeof this.histCount120 !== 'number')
+    this.histCount120 = HISTORY_LENGTH;
 };
 
 
@@ -142,6 +167,9 @@ Census.prototype.take10Census = function(budget) {
   else if (this.hospitalPop === this.resPopScaled)
     this.needHospital = 0;
 
+  if (this.histCount10 < HISTORY_LENGTH)
+    this.histCount10++;
+
   this.changed = true;
 };
 
@@ -156,8 +184,12 @@ Census.prototype.take120Census = function() {
   this.crimeHist120[0] = this.crimeHist10[0];
   this.pollutionHist120[0] = this.pollutionHist10[0];
   this.moneyHist120[0] = this.moneyHist10[0];
+
+  if (this.histCount120 < HISTORY_LENGTH)
+    this.histCount120++;
+
   this.changed = true;
 };
 
 
-export { Census };
+export { Census, HISTORY_LENGTH };

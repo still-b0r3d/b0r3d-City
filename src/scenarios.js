@@ -29,8 +29,8 @@
 // starting point to rebalance once people have actually played them.
 //
 // Disaster types, triggered by scenarioController.js shortly after the city
-// loads (and, for 'monsterWaves', again every `everyYears` years):
-//   'earthquake', 'fire', 'flood', 'meltdown', 'monster', 'monsterWaves'
+// loads (and, for any type ending in 'Waves', again every `everyYears` years):
+//   'earthquake', 'fire', 'flood', 'meltdown', 'monster', 'monsterWaves', 'zombieWaves'
 
 var SCENARIOS = [
   {
@@ -136,7 +136,7 @@ var SCENARIOS = [
     year: 2031,
     deadlineYears: 25,
     blurb: "It's a quiet town. It won't stay that way -- the horde returns every few years, and it's not picky about who's in the way.",
-    disaster: { type: 'monsterWaves', everyYears: 5 },
+    disaster: { type: 'zombieWaves', everyYears: 5 },
     objective: { type: 'population', target: 5000 },
     surviveToDeadline: true,
     flavorWin: 'The horde stopped coming. The town held.',

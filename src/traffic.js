@@ -102,7 +102,7 @@ var MAX_TRAFFIC_DISTANCE = 30;
 
 Traffic.prototype.tryDrive = function(startPos, destFn) {
   var dirLast;
-  var drivePos = new Position(startPos);
+  var drivePos = new Position(startPos.x, startPos.y);
 
   /* Maximum distance to try */
   for (var dist = 0; dist < MAX_TRAFFIC_DISTANCE; dist++) {
@@ -112,7 +112,7 @@ Traffic.prototype.tryDrive = function(startPos, destFn) {
       dirLast = dir.oppositeDirection();
 
       if (dist & 1)
-        this._stack.push(new Position(drivePos));
+        this._stack.push(drivePos);
 
       if (this.driveDone(drivePos, destFn))
         return true;

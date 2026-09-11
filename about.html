@@ -39,13 +39,9 @@
         <p>
           b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, a handmade port of <a href="http://code.google.com/p/micropolis/">Micropolis</a> to Javascript. (Micropolis is the open-source release of a commercial game once sold by Electronic Arts). The aim is to grow your city, balancing the various competing demands. Use the buttons in the toolbox to select the various zones and buildings, and then click on the desired location to build.
         </p>
-        <h3 class="alignCenter chunk">Version 0.89 &mdash; First Release</h3>
-        <p>
-          This is b0r3d-city's first versioned release. Everything on this page&mdash;Scenarios, Classic Cities, the civic buildings, the windowing system, all of it&mdash;is what shipped in it. Prefer playing off the web? Two portable Windows builds are attached to <a href="https://github.com/still-b0r3d/b0r3d-City/releases" target="_blank">this repo's Releases</a>: <code>b0r3d-city.exe</code>, a full offline build that bundles this version and needs no connection, and <code>b0r3d-city-online.exe</code>, a thin launcher that just opens whatever's live here&mdash;never goes stale, but needs one.
-        </p>
         <h3 class="alignCenter chunk">What's New Since v0.89</h3>
         <p>
-          Everything below shipped after the version above went out. Newest first.
+          Everything below shipped after v0.89 went out. Newest first.
         </p>
         <ul>
           <li><strong>Traffic is back on the roads.</strong> The light- and heavy-traffic road tiles&mdash;the cars&mdash;had never once appeared in this fork, even though the v0.89 notes below say the traffic simulation was fixed. It was half fixed. A 2018 upstream refactor swapped in a new <code>Position</code> class and left two calls handing it a whole Position where it wanted an <code>x, y</code> pair, so every trip a zone tried to make failed on its very first step and the traffic map stayed at zero forever; repairing the crash on the next line only exposed this one. The knock-on effects went well past the missing art: every zone was told there was no route to wherever its people wanted to go, the Traffic overlay on City Maps was blank, the "traffic jams" notices could never fire, the traffic helicopter had nothing to chase, and Bern&mdash;whose whole objective is getting traffic <em>down</em>&mdash;won itself after the first year. The animation, the tile art and the road-density logic were all fine the whole time. Two lines in <code>traffic.js</code>.</li>
@@ -55,7 +51,7 @@
           <li><strong>Zombies.</strong> A new disaster, and the only one in the game that doesn't leave you rebuilding. The Zombies scenario was quietly using the monster all this time&mdash;now it has the real thing. A horde shambles in from the edges of the map and heads for the middle of town, and wherever they are, nobody wants to live: land value falls, zones start emptying out, and crime climbs. Nothing is flattened, though, and it all comes back once they're dealt with. Police stations are the answer&mdash;a zombie in a well-covered neighbourhood doesn't last anything like as long as one nobody's watching. Watch an outbreak happen on the Land Value and Crime maps.</li>
           <li><strong>Graphs.</strong> Ten and a hundred years of your city's history: residential, commercial and industrial population, crime, pollution and cash flow, each one you can switch on or off. All of it was already being recorded&mdash;and saved with your city&mdash;there was just never anywhere to look at it.</li>
           <li><strong>Speed controls.</strong> Pause, Slow, Medium and Fast, in the Menu panel. The speeds were always in there; the button just never offered more than stop and go.</li>
-          <li><strong>City Maps&mdash;a whole-city view, with eleven overlays.</strong> Population density, land value, crime, pollution, traffic, rate of growth, police and fire coverage, the land-value bonus from your civic buildings, and the power grid. All of that was already being worked out under the hood every tick&mdash;it's what decides whether your zones grow or rot&mdash;and until now there was no way to <em>look</em> at any of it except the Query tool, one tile at a time. It's also the fastest way around: click anywhere on it to jump the view there, and the box shows you where you're currently standing.</li>
+          <li><strong>City Maps&mdash;a whole-city view, with ten overlays.</strong> Population density, land value, crime, pollution, traffic, rate of growth, police and fire coverage, the land-value bonus from your civic buildings, and the power grid. All of that was already being worked out under the hood every tick&mdash;it's what decides whether your zones grow or rot&mdash;and until now there was no way to <em>look</em> at any of it except the Query tool, one tile at a time. It's also the fastest way around: click anywhere on it to jump the view there, and the box shows you where you're currently standing.</li>
           <li><strong>Startup is about eight times faster&mdash;first load went from roughly 13 seconds to under two.</strong> The game shipped two tile sheets and only ever drew from one. The second was downloaded, decoded and cut into a thousand-odd separate images on every single launch, and then never painted. It's gone.</li>
           <li><strong>Nine more civic buildings:</strong> Arcade, Museum, University, Data Centre, Rukus, Amusement Park, Megamart, Bar and Burger Baron. The Bar, Burger Baron and Arcade are the cheap, small routes to commercial demand; the Amusement Park and Megamart are the expensive, high-pull ones. The University is the School's heavyweight counterpart&mdash;one is worth six of them, in a fraction of the space. The Museum raises nearby land value harder than anything else you can build, Hospital included, and the Data Centre is the first building in the game that pushes <em>industrial</em> demand; nothing did before. And Rukus is <a href="https://b0r3d.org/rukus.html">the cat</a>, as a civic monument.</li>
           <li><strong>Civic demand buildings now share one ceiling per demand type,</strong> instead of each kind of building bringing a ceiling of its own&mdash;otherwise adding more kinds of building re-breaks the economy the same way stacking Schools once did. Each one carries a weight saying how much of a School or Casino it counts for, so a University can be worth six Schools without needing a second ceiling.</li>
@@ -102,24 +98,29 @@
           <li><strong>Police Stations:</strong> There are always some bad apples. Build some police stations to bring down the hammer of justice and keep crime under control!</li>
           <li><strong>Fire Stations:</strong> Some people just want to play with matches. Sometimes a great big freaking monster comes along and stomps all over your town. Put out the flames by building fire stations.</li>
           <li><strong>Coal Power:</strong> Show your dominion over nature by filling that fresh air with honking big dusty clouds of smoke, and keep those lights on!</li>
-          <li><strong>Nuclear Power:</strong> More expensive than coal power, but less polluting. These things are totally safe. Right?</li>
+          <li><strong>Nuclear Power:</strong> More expensive than coal power, but less polluting. These things are totally safe. Right? If you'd rather not find out, a Nuclear-Free Zone (see Ordinances, below) takes them off the toolbar&mdash;once you've bulldozed the ones you've already got.</li>
           <li><strong>Stadium:</strong> After a day struggling at those infernal industrial workhouses you erected, your citizens deserve to relax by watching the big game!</li>
           <li><strong>Airport:</strong> As your creation grows, your citizens will be seduced by the romantic dream of flying. Build an airport and let them meet the reality of weather delays and lousy service!</li>
           <li><strong>Seaport:</strong> Making stuff is hard work! As your town grows, your citizens will want huge container ships importing finished goods from halfway across the world.</li>
           <li><strong>Hospital:</strong> Keep your citizens patched up, and raise land values in the surrounding area while you're at it &mdash; on top of the one your city auto-builds once it's big enough to need it.</li>
           <li><strong>School:</strong> An educated citizenry wants somewhere nice to live. Schools give residential demand a city-wide nudge.</li>
           <li><strong>Casino:</strong> Vice is good for business &mdash; Casinos boost commercial demand across the whole city.</li>
-          <li><strong>Library:</strong> Free books, better neighbourhood. Raises nearby land value, gentler than a Hospital&mdash;and cheaper too.</li>
-          <li><strong>Museum:</strong> Culture, at a price. Raises nearby land value harder than anything else you can build, the Hospital included.</li>
+          <li><strong>Library:</strong> Free books, better neighbourhood. Raises nearby land value, more gently than a Hospital does, for the same money.</li>
+          <li><strong>Museum:</strong> Culture, at a price. Raises nearby land value harder than any of the everyday civic buildings, the Hospital included&mdash;only the three landmarks further down beat it.</li>
           <li><strong>Arcade:</strong> Somewhere for your citizens to lose their change. Cheaper and smaller than a Casino, and a slower way to the same commercial demand&mdash;so build a few.</li>
           <li><strong>University:</strong> What a School grows up to be. One is worth about six of them for residential demand, and takes up nowhere near six times the room.</li>
-          <li><strong>Data Centre:</strong> Someone has to keep the lights blinking. The only thing in town that makes industry want to expand&mdash;nothing else touches industrial demand.</li>
+          <li><strong>Data Centre:</strong> Someone has to keep the lights blinking. The only thing in town that makes industry want to expand&mdash;nothing else pushes industrial demand up.</li>
           <li><strong>Amusement Park:</strong> Ferris wheel, coaster, and a queue. The biggest commercial draw you can build, and priced like it&mdash;one pulls as hard as two Casinos.</li>
           <li><strong>Megamart:</strong> Everything under one enormous roof, surrounded by rather more car park than roof. A serious commercial draw for the money.</li>
           <li><strong>Bar:</strong> The cheapest thing on the toolbar that does anything at all. Barely moves commercial demand on its own; build a street of them.</li>
           <li><strong>Burger Baron:</strong> Drive-thru, pole sign, questionable lettuce. A small, cheap nudge to commercial demand.</li>
           <li><strong>Rukus:</strong> The cat. He does not do anything for demand, but the neighbourhood is measurably nicer for having him in it&mdash;more so than a Hospital, less than a Museum.</li>
+          <li><strong>Recycling Centre:</strong> The one building that takes something away. Knocks pollution down in the blocks around it&mdash;about thirty points on its own doorstep if it's powered and on a road, half that if it isn't. The cheap, unglamorous answer to an industrial estate, and no substitute for not building one.</li>
+          <li><strong>Arch:</strong> A landmark in the old sense: it does nothing but stand there, and the land around it is worth more for it. A step up from the Museum.</li>
+          <li><strong>Observatory:</strong> Same idea, taller. Lifts nearby land value a notch further than the Arch does.</li>
+          <li><strong>City Hall:</strong> Top of the ladder. Does more for the land around it than anything else you can build, and is priced like it.</li>
           <li><strong>Park:</strong> Sometimes you need to get away from it all. Parks provide a place to relax, get back to nature, and stare at the clouds of smoke from the power plant in the middle distance.</li>
+          <li><strong>Large Park:</strong> The 4x4, $2,000 version of the Park. Where the small one scatters a few trees, this one is deliberate&mdash;it raises land value in the blocks around it, somewhere between what a Library and a Hospital manage.</li>
           <li><strong>Road, Rail:</strong> Your citizens are going places. Unless you neglect to lay these.</li>
           <li><strong>Wire:</strong> Plug your citizens into the matrix. And to 240v AC.</li>
         </ul>
@@ -134,7 +135,7 @@
         </p>
         <h3 class="alignCenter chunk">Getting Around</h3>
         <p>
-          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around. Time has its own controls in the Menu panel: Pause, Slow, Medium and Fast. Slow gives you room to react while a city is small or a disaster is unfolding; Fast is for watching a decade go by.
+          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys (or W/A/S/D) pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around. Time has its own controls in the Menu panel: Pause, Slow, Medium and Fast. Slow gives you room to react while a city is small or a disaster is unfolding; Fast is for watching a decade go by.
         </p>
         <h3 class="alignCenter chunk">Graphs</h3>
         <p>
@@ -142,18 +143,46 @@
         </p>
         <h3 class="alignCenter chunk">City Maps</h3>
         <p>
-          Menu &rarr; City Maps opens the whole city at once, shrunk to fit a single window, with a dropdown to colour it by whatever you're worried about. <em>Crime</em>, <em>Pollution</em> and <em>Traffic</em> shade the trouble spots orange and red, so anything that isn't a problem stays out of your way. <em>Land Value</em> and <em>Population Density</em> run the other way, dark where there's nothing and bright where there's plenty. <em>Police Coverage</em>, <em>Fire Coverage</em> and <em>Civic Buildings</em> show you how far each of those actually reaches&mdash;usually less far than you'd hoped. <em>Rate of Growth</em> is the one to check when things feel stagnant: green neighbourhoods are on the way up, red ones are emptying out. And <em>Power Grid</em> paints everything wired into the grid yellow, except the parts that aren't getting any, which go red&mdash;the quickest way to find a zone you forgot to connect.
+          Menu &rarr; City Maps opens the whole city at once, shrunk to fit a single window, with a dropdown to colour it by whatever you're worried about (or leave it on <em>City</em> for a plain bird's-eye view). <em>Crime</em>, <em>Pollution</em> and <em>Traffic</em> shade the trouble spots orange and red, so anything that isn't a problem stays out of your way. <em>Land Value</em> and <em>Population Density</em> run the other way, dark where there's nothing and bright where there's plenty. <em>Police Coverage</em>, <em>Fire Coverage</em> and <em>Civic Buildings</em> show you how far each of those actually reaches&mdash;usually less far than you'd hoped. <em>Rate of Growth</em> is the one to check when things feel stagnant: green neighbourhoods are on the way up, red ones are emptying out. And <em>Power Grid</em> paints everything wired into the grid yellow, except the parts that aren't getting any, which go red&mdash;the quickest way to find a zone you forgot to connect.
         </p>
         <p>
           The white box on the map is where you're currently looking. Click anywhere else and the view jumps there, which beats panning across a city this size. The window stays open and keeps updating while you play, so you can leave it up in a corner and watch the damage spread.
         </p>
+        <h3 class="alignCenter chunk">Ordinances</h3>
+        <p>
+          Menu &rarr; Ordinances is where the city makes policy. Eight of them, each a checkbox: tick it and it's enacted, untick it and it's repealed, and the window keeps a running total of what the set you've picked will cost. Most are a standing bill the city pays every January along with everything else in the budget; Legalised Gambling and Parking Fines run the other way and pay <em>you</em>. Every price is worked out from how many people live here, so a policy that's pocket change for a village is a real line item once there are a million people to apply it to&mdash;worth checking the total again as you grow.
+        </p>
+        <ul>
+          <li><strong>Neighbourhood Watch:</strong> Residents keep an eye on the street. Crime falls citywide.</li>
+          <li><strong>Pollution Controls:</strong> Emissions limits on industry. Cleaner air, and industry likes it rather less.</li>
+          <li><strong>Legalised Gambling:</strong> A licence fee from every table in town. Commerce booms; so does crime.</li>
+          <li><strong>Parking Fines:</strong> Enforcement pays for itself and clears the streets. Shoppers are not thrilled.</li>
+          <li><strong>Free Transit Passes:</strong> Nobody pays to ride. Traffic thins out and the city is easier to live in.</li>
+          <li><strong>Homeless Shelters:</strong> Somewhere to go. Fewer people on the street, and a little less crime.</li>
+          <li><strong>Tourist Advertising:</strong> Billboards in every neighbouring city. Visitors spend, and the place looks smarter.</li>
+          <li><strong>Nuclear-Free Zone:</strong> No fission within city limits. Costs nothing, is worth a little on every land value in town, and takes the nuclear plant off the toolbar for as long as it stands. You can't declare one while a reactor is still running, though&mdash;bulldoze it first.</li>
+        </ul>
+        <p>
+          These are nudges to numbers the city was already working out, not switches&mdash;and they stack, so Neighbourhood Watch and Homeless Shelters together cut crime further than either does alone.
+        </p>
+        <h3 class="alignCenter chunk">Neighbouring Cities</h3>
+        <p>
+          Menu &rarr; Neighbours lists the three towns over the city limits&mdash;Northport, Ashgrove and Lowmoor&mdash;and what they'll do with electricity. Each has a rate it sells at, a rate it buys at, and a ceiling on how much it can trade. Pick <em>Buy their power</em> or <em>Sell them ours</em>, set an amount in blocks of 100 units, and the contract is settled once a year with the rest of the budget. Buying is the cheap way to put off your next power plant&mdash;cheaper than building one in year one, dearer than one before long, which is the trade. Selling is money for nothing right up until your own city grows into the headroom, because contracted power leaves town before your zones see any of it: oversell and it's you that browns out, not them.
+        </p>
+        <p>
+          Each neighbour keeps a score of how they feel about you, from hostile to warm. A year of honoured contracts warms it; cancelling a deal yourself cools it, and a bill you can't cover cools it more. Let it fall far enough and they'll walk away, take their megawatts with them, and refuse to deal for a few years afterward&mdash;usually at the exact moment your grid was leaning on them. Rates drift a little every year, and which way depends on how things stand between you. One thing to know before you sign: imported power makes your grid bigger, it doesn't make you one. Power still flows outward from your own plants, so a city with contracts and no plant of its own has capacity and nowhere to spread it from. The window will tell you, in so many words, if you're in that position.
+        </p>
         <h3 class="alignCenter chunk">Windows</h3>
         <p>
-          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Demand graph, Tools, City Maps and Graphs windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
+          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Menu, Demand graph, Tools, City Maps and Graphs windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
         </p>
         <h3 class="alignCenter chunk">Saving Your City</h3>
         <p>
           Hit Save and give your city a name. You get up to 3 saves at once&mdash;save over an existing name (you'll be asked to confirm first) or delete one to make room. Load Game on the welcome screen lists everything you've got, with its population, class, and the date you left off.
+        </p>
+        <h3 class="alignCenter chunk">Take Picture</h3>
+        <p>
+          Menu &rarr; Take Picture renders the city to an image&mdash;just what's on screen, or the whole map edge to edge&mdash;and gives you a link that opens it in a new tab, where a right-click saves it. Good for a before-and-after, or for proving the meltdown wasn't your fault.
         </p>
         <h3 class="alignCenter chunk">Disasters</h3>
         <p>
@@ -176,7 +205,7 @@
           <li><strong>Auto-budget:</strong> The simulator takes care of finances for you&mdash;well, until you go broke at least&mdash;. If you prefer more control, you can switch this on or off here, and spend spend spend every January.</li>
           <li><strong>Auto-bulldoze:</strong> When building on areas that contain terrain other than plain dirt, these must be cleared first, at a cost. You can turn this off, and prepare your building sites manually.</li>
           <li><strong>Auto-disasters:</strong> What's more fun than manually unleashing mayhem? Why having it unleashed by surprise of course!</li>
-          <li><strong>Speed:</strong> Time flies when you max out the game speed</li>
+          <li><strong>Speed:</strong> Time flies when you max out the game speed. The same four speeds sit on the Menu panel too, so you needn't come in here for them.</li>
           <li><strong>Cheat menu:</strong> Turns on a floating Cheats button with free money, free building, and every disaster on demand. Handy for testing, or if you'd rather skip straight to watching the city burn.</li>
         </ul>
       </div>

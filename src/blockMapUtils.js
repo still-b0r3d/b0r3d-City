@@ -15,6 +15,7 @@ import { BlockMap } from './blockMap.ts';
 import { Commercial } from './commercial.js';
 import { Industrial } from './industrial.js';
 import { MiscUtils } from './miscUtils.js';
+import { NO_MODIFIERS } from './ordinances.js';
 import { Random } from './random.ts';
 import { Residential } from './residential.js';
 import * as TileValues from "./tileValues.ts";
@@ -22,6 +23,13 @@ import * as TileValues from "./tileValues.ts";
 // Smoothing styles for map smoothing
 var SMOOTH_NEIGHBOURS_THEN_BLOCK = 0;
 var SMOOTH_ALL_THEN_CLAMP = 1;
+
+// How much of a Recycling Centre's smoothed coverage score comes off the pollution
+// reading for a block. The counterpart of the /20 the civic buildings' coverage gets
+// divided by when it is turned into a land value bonus, and picked the same way: by
+// putting one down next to a coal plant and reading the pollution figure off the query
+// tool until the building was worth building. See customBuildings.js.
+var WASTE_COVERAGE_DIVISOR = 4;
 
 
 // Smooth the map src into dest. The way in which the map is smoothed depends on the value of smoothStyle.
@@ -88,9 +96,13 @@ var neutraliseRateOfGrowthMap = function(blockMaps) {
 };
 
 
-// Over time, traffic density should ease.
-var neutraliseTrafficMap = function(blockMaps) {
+// Over time, traffic density should ease. Parking Fines and Free Transit Passes make
+// it ease faster -- both of them are, mechanically, nothing more than a larger number
+// subtracted here every pass. See ordinances.js.
+var neutraliseTrafficMap = function(blockMaps, modifiers) {
+  modifiers = modifiers || NO_MODIFIERS;
   var trafficDensityMap = blockMaps.trafficDensityMap;
+  var bonus = modifiers.trafficDecay;
 
   for (var x = 0, width = trafficDensityMap.width; x < width; x++) {
     for (var y = 0, height = trafficDensityMap.height; y < height; y++) {
@@ -98,12 +110,12 @@ var neutraliseTrafficMap = function(blockMaps) {
       if (trafficDensity === 0)
         continue;
 
-      if (trafficDensity <= 24)
+      if (trafficDensity <= 24 + bonus)
         trafficDensity = 0;
       else if (trafficDensity > 200)
-        trafficDensity = trafficDensity - 34;
+        trafficDensity = trafficDensity - 34 - bonus;
       else
-        trafficDensity = trafficDensity - 24;
+        trafficDensity = trafficDensity - 24 - bonus;
 
       trafficDensityMap.set(x, y, trafficDensity);
     }
@@ -184,7 +196,8 @@ var getCityCentreDistance = function(map, x, y) {
 //   * Proximity to undeveloped terrain (who doesn't love a good view?)
 //
 // Pollution is completely determined by the tile types in the block
-var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
+var pollutionTerrainLandValueScan = function(map, census, blockMaps, modifiers) {
+  modifiers = modifiers || NO_MODIFIERS;
   // We record raw pollution readings for each tile into tempMap1, and then use tempMap2 and tempMap1 to smooth
   // out the pollution in order to construct the new values for the populationDensityMap
   var tempMap1 = blockMaps.tempMap1;
@@ -272,6 +285,11 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
         // simulation's own arithmetic rather than around it.
         landValue -= Math.floor(zombieMap.worldGet(worldX, worldY) / 20);
 
+        // Tourist Advertising and the Nuclear-Free Zone are worth a flat few points
+        // everywhere, which is the cheapest possible way for a policy to be visible
+        // in the simulation: no map, no radius, no scan of its own. See ordinances.js.
+        landValue += modifiers.landValue;
+
         // Clamp in range 1-250 (0 represents undeveloped land)
         landValue = MiscUtils.clamp(landValue, 1, 250);
         landValueMap.set(x, y, landValue);
@@ -299,10 +317,26 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
 
   // We iterate over the now-smoothed pollution map rather than using the block map's copy routines
   // so that we can compute the average and total pollution en-route
+  var wasteMap = blockMaps.wasteMap;
+
   for (x = 0, width = map.width; x < width; x += pollutionDensityMap.blockSize) {
     for (y = 0, height = map.height; y < height; y += pollutionDensityMap.blockSize)  {
       // Copy the values into pollutionDensityMap
       var pollution = tempMap1.worldGet(x, y);
+
+      // Everything that cleans the air rather than stops it being dirtied applies
+      // here, on the smoothed reading, rather than back in the per-tile sum above:
+      // both the Recycling Centre's coverage radius and the Pollution Controls
+      // ordinance are about the neighbourhood, not about any one tile in it.
+      //
+      // Order matters. The ordinance scales, so it takes a percentage of whatever is
+      // left; the building subtracts, so it takes a fixed amount off the top. Applying
+      // the multiplier first means a Recycling Centre is worth the same 20-odd points
+      // whether or not Pollution Controls are in force, instead of being quietly
+      // devalued by 20% for having been built by a mayor who also had a policy.
+      pollution = Math.round(pollution * modifiers.pollution);
+      pollution = Math.max(0, pollution - Math.floor(wasteMap.worldGet(x, y) / WASTE_COVERAGE_DIVISOR));
+
       pollutionDensityMap.worldSet(x, y, pollution);
 
       if (pollution !== 0) {
@@ -334,7 +368,8 @@ var pollutionTerrainLandValueScan = function(map, census, blockMaps) {
 //    * The zone has a low value
 //    * The zone is a slum
 //    * The zone is far away from those pesky police
-var crimeScan = function(census, blockMaps) {
+var crimeScan = function(census, blockMaps, modifiers) {
+  modifiers = modifiers || NO_MODIFIERS;
   var policeStationMap = blockMaps.policeStationMap;
   var policeStationEffectMap = blockMaps.policeStationEffectMap;
   var crimeRateMap = blockMaps.crimeRateMap;
@@ -369,6 +404,13 @@ var crimeScan = function(census, blockMaps) {
 
         // If the police are nearby, there's no point committing the crime of the century
         value -= policeStationMap.worldGet(x, y);
+
+        // Policy applies last, and multiplies: Neighbourhood Watch takes a slice off
+        // whatever crime this neighbourhood was going to have, so it is worth most in
+        // the places that need it and nothing at all in the places that don't --
+        // which is the opposite of what a flat subtraction would do. Legalised
+        // Gambling works the same way in the other direction. See ordinances.js.
+        value = Math.round(value * modifiers.crime);
 
         // Force in to range 0-250
         value = MiscUtils.clamp(value, 0, 250);
@@ -507,9 +549,24 @@ var civicBuildingScan = function(blockMaps) {
 };
 
 
+// The Recycling Centre's equivalent of civicBuildingScan above: three smoothing passes
+// turn the per-building hits recorded during the map scan into a coverage radius. Kept
+// separate from civicBuildingScan for the same reason the maps are separate -- this
+// result is needed later in pollutionTerrainLandValueScan than that one is.
+var wasteScan = function(blockMaps) {
+  var wasteMap = blockMaps.wasteMap;
+  var wasteEffectMap = blockMaps.wasteEffectMap;
+
+  smoothMap(wasteMap, wasteEffectMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+  smoothMap(wasteEffectMap, wasteMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+  smoothMap(wasteMap, wasteEffectMap, SMOOTH_NEIGHBOURS_THEN_BLOCK);
+};
+
+
 var BlockMapUtils = {
   civicBuildingScan: civicBuildingScan,
   crimeScan: crimeScan,
+  wasteScan: wasteScan,
   fireAnalysis: fireAnalysis,
   neutraliseRateOfGrowthMap: neutraliseRateOfGrowthMap,
   neutraliseTrafficMap: neutraliseTrafficMap,

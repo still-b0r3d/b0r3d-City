@@ -80,6 +80,7 @@ neutralMessages[Messages.NEED_STADIUM] = true;
 neutralMessages[Messages.ROAD_NEEDS_FUNDING] = true;
 neutralMessages[Messages.POLICE_NEEDS_FUNDING] = true;
 neutralMessages[Messages.WELCOME] = true;
+neutralMessages[Messages.NEIGHBOUR_RATE_CHANGED] = true;
 
 var badMessages = {};
 badMessages[Messages.BLACKOUTS_REPORTED] = true;
@@ -102,6 +103,8 @@ badMessages[Messages.TAX_TOO_HIGH] = true;
 badMessages[Messages.TORNADO_SIGHTED] = true;
 badMessages[Messages.TRAFFIC_JAMS] = true;
 badMessages[Messages.TRAIN_CRASHED] = true;
+badMessages[Messages.NEIGHBOUR_BILL_UNPAID] = true;
+badMessages[Messages.NEIGHBOUR_DEAL_ENDED] = true;
 
 var goodMessages = {};
 goodMessages[Messages.REACHED_CAPITAL] = true;
@@ -151,6 +154,20 @@ messageText[Messages.REACHED_CITY] = 'Population has reached 10,000';
 messageText[Messages.REACHED_MEGALOPOLIS] = 'Population has reached 500,000';
 messageText[Messages.REACHED_METROPOLIS] = 'Population has reached 100,000';
 messageText[Messages.REACHED_TOWN] = 'Population has reached 2,000';
+
+// The three neighbour notices are the only messages here that have to name something
+// the player chose -- which neighbour, and what they did -- so these entries are
+// functions of the message's own data rather than fixed strings. Notification.
+// createMessage calls anything it finds here that turns out to be callable; every
+// other entry stays exactly the plain string it always was.
+messageText[Messages.NEIGHBOUR_BILL_UNPAID] =
+  'The city could not pay for its imported power. Neighbours are unimpressed';
+messageText[Messages.NEIGHBOUR_DEAL_ENDED] = function(data) {
+  return data.name + ' has ended its power contract with the city';
+};
+messageText[Messages.NEIGHBOUR_RATE_CHANGED] = function(data) {
+  return data.name + ' has ' + data.direction + ' its rate to $' + data.rate + ' per 100 units';
+};
 
 var Text = {
   badMessages: badMessages,

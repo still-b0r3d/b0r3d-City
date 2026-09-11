@@ -26,6 +26,8 @@ import { MapScanner } from './mapScanner.js';
 import * as Messages from './messages.ts';
 import { MiscTiles } from './miscTiles.js';
 import { MiscUtils } from './miscUtils.js';
+import { Neighbours } from './neighbours.js';
+import { Ordinances } from './ordinances.js';
 import { PowerManager } from './powerManager.js';
 import { RepairManager } from './repairManager.js';
 import { Residential } from './residential.js';
@@ -59,8 +61,14 @@ var Simulation = EventEmitter(function (gameMap, gameLevel, speed, savedGame) {
   this.evaluation = new Evaluation(this._gameLevel);
   this._valves = new Valves();
   this.budget = new Budget();
+  // Policy, and the market in electricity next door. Neither owns a tile, a sprite or
+  // a scan of its own -- both are pure bookkeeping that lands on numbers the rest of
+  // the simulation was already computing -- so they sit here beside the budget, and
+  // both settle once a year through collectTax.
+  this.ordinances = new Ordinances();
+  this.neighbours = new Neighbours();
   this._census = new Census();
-  this._powerManager = new PowerManager(this._map);
+  this._powerManager = new PowerManager(this._map, this.neighbours);
   this.spriteManager = new SpriteManager(this._map);
   this._mapScanner = new MapScanner(this._map);
   this._repairManager = new RepairManager(this._map);
@@ -99,6 +107,13 @@ var Simulation = EventEmitter(function (gameMap, gameLevel, speed, savedGame) {
 
     // Holds a value representing the amount of pollution in a neighbourhood, in the range 0-255
     pollutionDensityMap: new BlockMap(this._map.width, this._map.height, 2),
+
+    // A map used to note positions of Recycling Centres during the map scan, and its
+    // smoothing partner -- the exact arrangement civicBuildingMap/civicBuildingEffectMap
+    // have, at the same chunk size of 8, because it is the same mechanism pointed at
+    // the pollution map instead of the land value one. See wasteScan in blockMapUtils.js.
+    wasteMap: new BlockMap(this._map.width, this._map.height, 8),
+    wasteEffectMap: new BlockMap(this._map.width, this._map.height, 8),
 
     // Holds a value representing population density of a block, in the range 0-510
     populationDensityMap: new BlockMap(this._map.width, this._map.height, 2),
@@ -174,6 +189,22 @@ Simulation.prototype.getSpeed = function() {
 };
 
 
+// The state of the power grid, for the neighbours window. Capacity and consumption are
+// whatever the last power scan measured -- there is no cheap way to recompute them on
+// demand, since consumption is only known by walking the whole grid, and the scan
+// already does that several times a second.
+Simulation.prototype.getPowerReport = function() {
+  return {
+    generated: this._powerManager.lastGenerated,
+    imported: this.neighbours.getImportedPower(),
+    exported: this.neighbours.getExportedPower(),
+    capacity: this._powerManager.lastCapacity,
+    consumption: this._powerManager.lastConsumption,
+    scanCompleted: this._powerManager.lastScanCompleted
+  };
+};
+
+
 // The census, for graphWindow.js. Public accessor rather than reaching into _census
 // directly, since the history arrays it plots are rotated in place and the window
 // holds the reference for the life of the city.
@@ -196,6 +227,8 @@ Simulation.prototype.save = function(saveData) {
   this.evaluation.save(saveData);
   this._valves.save(saveData);
   this.budget.save(saveData);
+  this.ordinances.save(saveData);
+  this.neighbours.save(saveData);
   this._census.save(saveData);
 };
 
@@ -208,6 +241,8 @@ Simulation.prototype.load = function(saveData) {
   this.evaluation.load(saveData);
   this._valves.load(saveData);
   this.budget.load(saveData);
+  this.ordinances.load(saveData);
+  this.neighbours.load(saveData);
   this._census.load(saveData);
 
   // The save's own population, not a rescan: init() already seeded a baseline from
@@ -277,6 +312,7 @@ Simulation.prototype._clearCensus = function() {
   this.blockMaps.fireStationMap.clear();
   this.blockMaps.policeStationMap.clear();
   this.blockMaps.civicBuildingMap.clear();
+  this.blockMaps.wasteMap.clear();
 
   var zombieMap = this.blockMaps.zombieMap;
   for (var x = 0; x < zombieMap.width; x++) {
@@ -336,6 +372,18 @@ Simulation.prototype.init = function() {
 
   this._valves.addEventListener(Messages.VALVES_UPDATED, this._onValveChange.bind(this));
 
+  // The neighbours announce their own news -- a rate rise, a contract torn up, a bill
+  // the city couldn't pay -- and it reaches the notification bar the same way any
+  // other front-end message does. ORDINANCES_CHANGED/NEIGHBOURS_CHANGED are the
+  // quieter pair: they say only "the numbers on those two windows are stale now", and
+  // exist so a window that happens to be open can redraw itself.
+  this.neighbours.addEventListener(Messages.FRONT_END_MESSAGE,
+                                   MiscUtils.reflectEvent.bind(this, Messages.FRONT_END_MESSAGE));
+  this.neighbours.addEventListener(Messages.NEIGHBOURS_CHANGED,
+                                   MiscUtils.reflectEvent.bind(this, Messages.NEIGHBOURS_CHANGED));
+  this.ordinances.addEventListener(Messages.ORDINANCES_CHANGED,
+                                   MiscUtils.reflectEvent.bind(this, Messages.ORDINANCES_CHANGED));
+
   for (i = 0, l = Messages.DISASTER_MESSAGES.length; i < l; i++) {
     this.spriteManager.addEventListener(Messages.DISASTER_MESSAGES[i], this._wrapMessage.bind(this, Messages.DISASTER_MESSAGES[i]));
     this.disasterManager.addEventListener(Messages.DISASTER_MESSAGES[i], this._wrapMessage.bind(this, Messages.DISASTER_MESSAGES[i]));
@@ -358,11 +406,13 @@ Simulation.prototype.init = function() {
   Transport.registerHandlers(this._mapScanner, this._repairManager);
 
   var simData = this._constructSimData();
+  var modifiers = this.ordinances.getModifiers();
   this._mapScanner.mapScan(0, this._map.width, simData);
   this._powerManager.doPowerScan(this._census);
   BlockMapUtils.civicBuildingScan(this.blockMaps);
-  BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps);
-  BlockMapUtils.crimeScan(this._census, this.blockMaps);
+  BlockMapUtils.wasteScan(this.blockMaps);
+  BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps, modifiers);
+  BlockMapUtils.crimeScan(this._census, this.blockMaps, modifiers);
   BlockMapUtils.populationDensityScan(this._map, this.blockMaps);
   BlockMapUtils.fireAnalysis(this.blockMaps);
 
@@ -410,7 +460,7 @@ var simulate = function(simData) {
       this._cityTime++;
 
       if ((this._simCycle & 1) === 0)
-        this._valves.setValves(this._gameLevel, this._census, this.budget);
+        this._valves.setValves(this._gameLevel, this._census, this.budget, this.ordinances.getModifiers());
 
       this._clearCensus();
       break;
@@ -435,7 +485,7 @@ var simulate = function(simData) {
         this._census.take120Census(this.budget);
 
       if (this._cityTime % TAX_FREQUENCY === 0)  {
-        this.budget.collectTax(this._gameLevel, this._census);
+        this.budget.collectTax(this._gameLevel, this._census, this.ordinances, this.neighbours);
         this.evaluation.cityEvaluation(simData);
       }
 
@@ -445,7 +495,7 @@ var simulate = function(simData) {
       if ((this._simCycle % 5) === 0)
         BlockMapUtils.neutraliseRateOfGrowthMap(simData.blockMaps);
 
-      BlockMapUtils.neutraliseTrafficMap(this.blockMaps);
+      BlockMapUtils.neutraliseTrafficMap(this.blockMaps, this.ordinances.getModifiers());
       this._sendMessages();
       break;
 
@@ -457,13 +507,15 @@ var simulate = function(simData) {
     case 12:
       if ((this._simCycle % speedPollutionTerrainLandValueScan[speedIndex]) === 0) {
         BlockMapUtils.civicBuildingScan(this.blockMaps);
-        BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps);
+        BlockMapUtils.wasteScan(this.blockMaps);
+        BlockMapUtils.pollutionTerrainLandValueScan(this._map, this._census, this.blockMaps,
+                                                   this.ordinances.getModifiers());
       }
       break;
 
     case 13:
       if ((this._simCycle % speedCrimeScan[speedIndex]) === 0)
-        BlockMapUtils.crimeScan(this._census, this.blockMaps);
+        BlockMapUtils.crimeScan(this._census, this.blockMaps, this.ordinances.getModifiers());
       break;
 
     case 14:

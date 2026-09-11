@@ -134,6 +134,8 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   // have run -- a direct .click() binding here would never see those.
   $('#buttons').on('click', '.toolButton', toolButtonHandler.bind(this));
   $('#budgetRequest').click(budgetHandler.bind(this));
+  $('#ordinanceRequest').click(ordinanceHandler.bind(this));
+  $('#neighbourRequest').click(neighbourHandler.bind(this));
   $('#evalRequest').click(evalHandler.bind(this));
   $('#mapRequest').click(mapHandler.bind(this));
   $('#graphRequest').click(graphHandler.bind(this));
@@ -733,6 +735,8 @@ var disasterHandler = makeHandler('DISASTER_REQUESTED');
 var evalHandler = makeHandler('EVAL_REQUESTED');
 var mapHandler = makeHandler('MAP_WINDOW_REQUESTED');
 var graphHandler = makeHandler('GRAPH_WINDOW_REQUESTED');
+var ordinanceHandler = makeHandler('ORDINANCE_WINDOW_REQUESTED');
+var neighbourHandler = makeHandler('NEIGHBOUR_WINDOW_REQUESTED');
 
 
 // Same shape as makeHandler above, but carrying which of the four speed buttons was

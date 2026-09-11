@@ -139,6 +139,11 @@
             <header class="panelHeader alignCenter">Menu</header>
             <div id="menuButtons">
               <button id="budgetRequest" class="miscButton">Budget</button>
+              <!-- The two windows that spend money without placing a tile: city
+                   policy, and the power market next door. Both sit directly under
+                   Budget because both settle through it every January. -->
+              <button id="ordinanceRequest" class="miscButton">Ordinances</button>
+              <button id="neighbourRequest" class="miscButton">Neighbours</button>
               <button id="evalRequest" class="miscButton">Evaluation</button>
               <button id="mapRequest" class="miscButton">City Maps</button>
               <button id="graphRequest" class="miscButton">Graphs</button>
@@ -241,6 +246,12 @@
           <form id="budgetForm">
             <div id="taxInfo" class="elided budgetData">Tax Collected: <span id="taxesCollected"></span></div>
             <div id="cashInfo" class="elided budgetRight budgetData">Cashflow: <span id="cashFlow"></span></div>
+            <!-- The two fixed commitments. Reported rather than adjustable: unlike the
+                 three sliders below, an ordinance is enacted or repealed and a power
+                 contract is signed or torn up, so there is no percentage to set. They
+                 are changed in their own windows; this is where the bill turns up. -->
+            <div id="ordinanceInfo" class="elided budgetData">Ordinances: <span id="ordinanceCost"></span></div>
+            <div id="contractInfo" class="elided budgetRight budgetData">Power contracts: <span id="contractCost"></span></div>
             <div id="previousInfo" class="elided budgetData">Previous funds: <span id="previousFunds"></span></div>
             <div id="currentInfo" class="elided budgetRight budgetData">Current funds: <span id="currentFunds"></span></div>
             <fieldset>
@@ -275,6 +286,44 @@
               <button id="budgetReset">Reset</button>
               <button id="budgetCancel" class="width140 cancel">Cancel</button>
               <input type="submit" id="budgetOK" class="width140 dialogOK" value="OK">
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- Ordinances and Neighbours are shells only: both windows build their own
+           bodies from src/ordinances.js and src/neighbours.js when they open, the same
+           way the custom buildings' tool buttons are built from customBuildings.js.
+           Adding a policy or a neighbouring town needs no markup here. -->
+      <div class="hidden modal shadow" id="ordinanceWindow">
+        <header id="ordinanceHeader" class="ordinanceHeader padding10 chunk alignCenter">
+           City Ordinances
+        </header>
+        <div id="ordinanceContainer" class="padding10 open">
+          <form id="ordinanceForm">
+            <div id="ordinanceList"></div>
+            <div id="ordinanceTotal" class="alignCenter">Nothing enacted</div>
+            <div id="ordinanceButtons" class="alignCenter">
+              <button id="ordinanceCancel" class="width140 cancel">Cancel</button>
+              <input type="submit" id="ordinanceOK" class="width140 dialogOK" value="OK">
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="hidden modal shadow" id="neighbourWindow">
+        <header id="neighbourHeader" class="neighbourHeader padding10 chunk alignCenter">
+           Neighbouring Cities
+        </header>
+        <div id="neighbourContainer" class="padding10 open">
+          <form id="neighbourForm">
+            <div id="neighbourPower" class="alignCenter"></div>
+            <!-- Only ever filled in when the city has import contracts and no power
+                 plant of its own, which is the one way these contracts can look
+                 broken while working exactly as designed. -->
+            <div id="neighbourWarning" class="alignCenter"></div>
+            <div id="neighbourList"></div>
+            <div id="neighbourButtons" class="alignCenter">
+              <button id="neighbourCancel" class="width140 cancel">Cancel</button>
+              <input type="submit" id="neighbourOK" class="width140 dialogOK" value="OK">
             </div>
           </form>
         </div>

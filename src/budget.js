@@ -47,6 +47,16 @@ var Budget = EventEmitter(function() {
   this.fireMaintenanceBudget = 0;
   this.policeMaintenanceBudget = 0;
 
+  // The two fixed commitments, settled in full each January before the funding sliders
+  // get a look in. Unlike the three above, these are not percent-funded: an ordinance
+  // is either in force or repealed and a power contract is either signed or torn up,
+  // so there is nothing sensible for a slider to mean. Both can be negative --
+  // Legalised Gambling and a power export contract are income -- and the budget window
+  // shows them as one combined line rather than as sliders. See ordinances.js and
+  // neighbours.js.
+  this.ordinanceBudget = 0;
+  this.neighbourBudget = 0;
+
   // Percentage of budget used
   this.roadPercent = 1;
   this.firePercent = 1;
@@ -64,7 +74,8 @@ var Budget = EventEmitter(function() {
 
 var saveProps = ['autoBudget', 'totalFunds', 'policePercent', 'roadPercent', 'firePercent', 'roadSpend',
                  'policeSpend', 'fireSpend', 'roadMaintenanceBudget', 'policeMaintenanceBudget',
-                 'fireMaintenanceBudget', 'cityTax', 'roadEffect', 'policeEffect', 'fireEffect'];
+                 'fireMaintenanceBudget', 'cityTax', 'roadEffect', 'policeEffect', 'fireEffect',
+                 'ordinanceBudget', 'neighbourBudget'];
 
 Budget.prototype.save = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)
@@ -75,6 +86,14 @@ Budget.prototype.save = function(saveData) {
 Budget.prototype.load = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)
     this[saveProps[i]] = saveData[saveProps[i]];
+
+  // Saves written before ordinances and neighbour deals existed carry neither figure.
+  // Both are recomputed from scratch by the next collectTax anyway; this is only so
+  // that a budget window opened in the meantime has a number to print.
+  if (typeof this.ordinanceBudget !== 'number')
+    this.ordinanceBudget = 0;
+  if (typeof this.neighbourBudget !== 'number')
+    this.neighbourBudget = 0;
 
   this._emitEvent(Messages.AUTOBUDGET_CHANGED, this.autoBudget);
   this._emitEvent(Messages.FUNDS_CHANGED, this.totalFunds);
@@ -89,6 +108,17 @@ Budget.prototype.setAutoBudget = function(value) {
 
 var RLevels = [0.7, 0.9, 1.2];
 var FLevels = [1.4, 1.2, 0.8];
+
+
+// What the city owes this year that no slider can reduce. Deducted before the funding
+// percentages are worked out, so ordinances and power contracts have first claim on
+// the money and it is roads, fire and police that get squeezed when there isn't
+// enough -- which is the right way round: the contract was signed, the ordinance was
+// enacted, and neither can be part-paid. Negative when the revenue-raising ordinances
+// and export contracts outweigh the rest, in which case this simply adds to the pot.
+Budget.prototype.fixedCommitments = function() {
+  return this.ordinanceBudget + this.neighbourBudget;
+};
 
 // Calculates the best possible outcome in terms of funding the various services
 // given the player's current funds and tax yield. On entry, roadPercent etc. are
@@ -117,7 +147,7 @@ Budget.prototype._calculateBestPercentages = function() {
   var fireCost = 0;
   var policeCost = 0;
 
-  var cashRemaining = this.totalFunds + this.taxFund;
+  var cashRemaining = this.totalFunds + this.taxFund - this.fixedCommitments();
 
   // Spending priorities: road, fire, police
   if (cashRemaining >= this.roadSpend)
@@ -176,7 +206,7 @@ Budget.prototype.doBudgetNow = function(fromWindow) {
   var roadCost = costs.road;
   var policeCost = costs.police;
   var fireCost = costs.fire;
-  var totalCost = roadCost + policeCost + fireCost;
+  var totalCost = roadCost + policeCost + fireCost + this.fixedCommitments();
   var cashRemaining = this.totalFunds + this.taxFund - totalCost;
 
   // Autobudget
@@ -200,7 +230,7 @@ Budget.prototype.doBudgetSpend = function(roadValue, fireValue, policeValue) {
   this.roadSpend = roadValue;
   this.fireSpend = fireValue;
   this.policeSpend = policeValue;
-  var total = this.roadSpend + this.fireSpend + this.policeSpend;
+  var total = this.roadSpend + this.fireSpend + this.policeSpend + this.fixedCommitments();
 
   this.spend(-(this.taxFund - total));
   this.updateFundEffects();
@@ -229,7 +259,7 @@ Budget.prototype.updateFundEffects = function() {
 };
 
 
-Budget.prototype.collectTax = function(gameLevel, census) {
+Budget.prototype.collectTax = function(gameLevel, census, ordinances, neighbours) {
   this.cashFlow = 0;
 
   // How much would it cost to fully fund every service?
@@ -242,8 +272,16 @@ Budget.prototype.collectTax = function(gameLevel, census) {
 
   this.taxFund = Math.floor(Math.floor(census.totalPop * census.landValueAverage / 120) * this.cityTax * FLevels[gameLevel]);
 
+  // The year's fixed commitments, worked out after the tax take is known, because
+  // settleYear has to decide whether the city can actually cover its power bills --
+  // and a defaulted bill is what costs a mayor their standing with the neighbours.
+  // Both arguments are optional so that a Budget can still be driven on its own.
+  this.ordinanceBudget = ordinances ? ordinances.getAnnualCost(census) : 0;
+  this.neighbourBudget = neighbours ? neighbours.settleYear(this) : 0;
+
   if (census.totalPop > 0) {
-    this.cashFlow = this.taxFund - (this.policeMaintenanceBudget + this.fireMaintenanceBudget + this.roadMaintenanceBudget);
+    this.cashFlow = this.taxFund - (this.policeMaintenanceBudget + this.fireMaintenanceBudget +
+                                    this.roadMaintenanceBudget + this.fixedCommitments());
     this.doBudgetNow(false);
   } else {
     // We don't want roads etc deteriorating when population hasn't yet been established

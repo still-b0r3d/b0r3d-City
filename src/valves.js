@@ -13,6 +13,7 @@
 
 import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { EventEmitter } from './eventEmitter.js';
+import { NO_MODIFIERS } from './ordinances.js';
 import { VALVES_UPDATED } from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
 
@@ -120,7 +121,8 @@ Valves.prototype.load = function(saveData) {
 };
 
 
-Valves.prototype.setValves = function(gameLevel, census, budget) {
+Valves.prototype.setValves = function(gameLevel, census, budget, modifiers) {
+  modifiers = modifiers || NO_MODIFIERS;
   var resPopDenom = 8;
   var birthRate = 0.02;
   var labourBaseMax = 1.3;
@@ -188,6 +190,17 @@ Valves.prototype.setValves = function(gameLevel, census, budget) {
   resRatio += demandBoost(census, 'residential');
   comRatio += demandBoost(census, 'commercial');
   indRatio += demandBoost(census, 'industrial');
+
+  // Ordinances nudge the same three ratios, and are deliberately kept outside the
+  // saturating curve above rather than folded into it. That curve exists because the
+  // thing it governs is unbounded -- you can always build another School -- and its
+  // shared per-valve ceiling is what stops fourteen of them pinning demand at
+  // maximum. Policy has no such problem: there are eight ordinances, each enactable
+  // once, and the largest total any one valve can see from them is 0.08, against the
+  // buildings' 0.25 and a hard clamp of 2 immediately below. See ordinances.js.
+  resRatio += modifiers.demand.residential;
+  comRatio += modifiers.demand.commercial;
+  indRatio += modifiers.demand.industrial;
 
   resRatio = Math.min(resRatio, resRatioMax);
   comRatio = Math.min(comRatio, comRatioMax);

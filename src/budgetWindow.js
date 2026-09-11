@@ -33,6 +33,17 @@ var budgetFormID = '#budgetForm';
 var budgetOKID = '#budgetOK';
 
 
+// A cost, where a negative figure means the city is being paid rather than paying.
+// The rest of this window only ever shows money going one way, so a bare "-$400" next
+// to four other dollar amounts that are all outgoings reads wrong.
+var formatSigned = function(amount) {
+  if (amount === 0)
+    return '$0';
+
+  return amount > 0 ? '-$' + amount : '+$' + (-amount);
+};
+
+
 var setSpendRangeText = function(element, percentage, totalSpend) {
   var labelID = element + 'Label';
   var cash = Math.floor(totalSpend * (percentage / 100));
@@ -140,8 +151,18 @@ BudgetWindow.prototype.open = function(budgetData) {
   if (taxesCollected === undefined)
     throw new Error('Missing budget data (taxesCollected)');
 
-  var cashFlow = taxesCollected - this.roadMaintenanceBudget - this.fireMaintenanceBudget - this.policeMaintenanceBudget;
+  // The two fixed commitments, which the player cannot adjust from here but which come
+  // out of the same pot -- and, in the case of Legalised Gambling or an export
+  // contract, sometimes go into it. Missing from budgetData only when a Budget is
+  // driven without ordinances or neighbours, which nothing in the game does.
+  var ordinanceCost = budgetData.ordinanceBudget || 0;
+  var contractCost = budgetData.neighbourBudget || 0;
+
+  var cashFlow = taxesCollected - this.roadMaintenanceBudget - this.fireMaintenanceBudget -
+                 this.policeMaintenanceBudget - ordinanceCost - contractCost;
   var currentFunds = previousFunds + cashFlow;
+  $('#ordinanceCost').text(formatSigned(ordinanceCost));
+  $('#contractCost').text(formatSigned(contractCost));
   $('#taxesCollected').text('$' + taxesCollected);
   $('#cashFlow').text((cashFlow < 0 ? '-$' : '$') + cashFlow);
   $('#previousFunds').text((previousFunds < 0 ? '-$' : '$') + previousFunds);

@@ -131,15 +131,66 @@ var RAW_BUILDINGS = [
     colour: 'gold', textColour: 'black',
     effect: { type: 'demand', censusStat: 'burgerBaronPop', valve: 'commercial', weight: 0.4 },
   },
+  // The city's answer to its own rubbish, and the one building here that subtracts
+  // from something rather than adding to it. Deliberately not a citywide garbage
+  // *statistic* of the sort the later games grew -- no tonnage, no landfill capacity,
+  // no per-zone production rate, none of the bookkeeping that would need. It is a
+  // building with a radius, exactly like the Hospital, that happens to point at the
+  // pollution map instead of the land value one. See handleCleanupBuilding in
+  // civicBuildings.js, and wasteScan in blockMapUtils.js.
+  //
+  // 480 against the pollution map's 0-255 range sounds enormous, and it is: what
+  // actually reaches the map is far smaller. Three passes of neighbour-smoothing leave
+  // roughly a quarter of the figure on the block the building sits on, and
+  // pollutionTerrainLandValueScan then divides by WASTE_COVERAGE_DIVISOR. Net effect,
+  // measured in game: about 30 points off the block it stands on when it is powered
+  // and on the road network, half that when it isn't, and a few points on the
+  // neighbouring blocks. Noticeable next to an industrial estate; nowhere near enough
+  // to run a city with no environmental policy at all.
+  {
+    id: 'recyclingCentre', label: 'Recycling Centre', cost: 2200, size: 3, animated: false,
+    colour: 'seagreen', textColour: 'white',
+    effect: { type: 'cleanup', censusStat: 'recyclingCentrePop', pollutionEffect: 480 },
+  },
+  // Three landmarks, in the sense the later games used the word: expensive, purely
+  // civic, and worth building because of what they do to the neighbourhood around
+  // them rather than because the city needs one. Rukus above was the first; these
+  // continue the same land-value ladder (Library 300, Large Park 350, Hospital 400,
+  // Rukus 450, Museum 500) at its top end, and are priced so that the ladder and the
+  // price list finally agree with each other from here on.
+  {
+    id: 'arch', label: 'Arch', cost: 2500, size: 3, animated: false,
+    colour: 'darkkhaki', textColour: null,
+    effect: { type: 'coverage', censusStat: 'archPop', landValueEffect: 520 },
+  },
+  {
+    id: 'observatory', label: 'Observatory', cost: 3500, size: 3, animated: false,
+    colour: 'lightsteelblue', textColour: null,
+    effect: { type: 'coverage', censusStat: 'observatoryPop', landValueEffect: 560 },
+  },
+  // The most a single building can do for the land around it, at four times the
+  // Museum's price and nearly three times its footprint. Nothing in the ordinances
+  // system requires one -- policy is enacted from the Menu panel, not from a building
+  // you have to have built -- so this stays what every other entry here is: a thing
+  // you put down because you want that part of town to be worth more.
+  {
+    id: 'cityHall', label: 'City Hall', cost: 6000, size: 4, animated: false,
+    colour: 'peru', textColour: 'white',
+    effect: { type: 'coverage', censusStat: 'cityHallPop', landValueEffect: 600 },
+  },
   // Future buildings just get appended here -- tile IDs below are computed
   // automatically from size + position in this list, never hand-picked.
   //
-  // Tile budget: the sheet is 512x608, i.e. 1216 tiles, and the list above ends at
-  // 1198, leaving 17. It was grown from 576 to 608 to fit the last five buildings --
+  // Tile budget: the sheet is 512x624, i.e. 1248 tiles, and the list above ends at
+  // 1241, leaving 6. It was grown from 608 to 624 to fit the last four buildings --
   // tileSet.js derives its tile count from the sheet's height, so nothing in the code
   // caps this, but the art file has to grow first, and every added row costs startup
   // time, since TileSet turns each tile into its own Image via canvas.toDataURL.
   // Grow by the smallest whole number of rows that fits what's being added.
+  //
+  // The art for those last four is drawn by scripts/generate-building-art.mjs, which
+  // derives its tile offsets by walking this same list. Anything inserted *above*
+  // them here moves their tiles, so re-run that script after reordering.
 ];
 
 // baseTile/centreTile/lastTile follow BuildingTool's own convention

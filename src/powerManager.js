@@ -24,11 +24,51 @@ var COAL_POWER_STRENGTH = 700;
 var NUCLEAR_POWER_STRENGTH = 2000;
 
 
-var PowerManager = EventEmitter(function(map) {
+var PowerManager = EventEmitter(function(map, neighbours) {
   this._map = map;
+  // Optional: a PowerManager built without one simply has no external market, which
+  // is what every caller had before neighbour deals existed.
+  this._neighbours = neighbours || null;
   this._powerStack = [];
   this.powerGridMap = new BlockMap(this._map.width, this._map.height, 1);
+
+  // The last scan's figures, for the neighbours window to show the player what their
+  // grid actually looks like before they go and sell half of it. Consumption is only
+  // meaningful once a scan has completed without bailing out, hence the flag.
+  //
+  // Generation is recorded here rather than recomputed from the census on demand, even
+  // though recomputing it is one multiplication: the census is cleared and refilled
+  // over eight simulation phases, so asking it how many power plants the city has at
+  // an arbitrary moment can return any figure between none of them and all of them.
+  // Reading it here, at the one point where the whole census is known to be current,
+  // is what keeps "generated" and "available" in the window agreeing with each other.
+  this.lastCapacity = 0;
+  this.lastGenerated = 0;
+  this.lastConsumption = 0;
+  this.lastScanCompleted = true;
 });
+
+
+// What the city's own plants can deliver, plus whatever the neighbours are contracted
+// to supply, minus whatever has been promised to them. Exports come off the top: the
+// contracted power leaves before the city gets any of it, so overselling doesn't
+// short-change the neighbour, it browns out the seller. That asymmetry is the whole
+// risk in an export contract, and it is one subtraction.
+PowerManager.prototype.getCapacity = function(census) {
+  var generated = this.getGeneratedPower(census);
+
+  if (this._neighbours === null)
+    return generated;
+
+  return Math.max(0, generated + this._neighbours.getImportedPower() - this._neighbours.getExportedPower());
+};
+
+
+// What the city's own plants produce, before anything is traded either way.
+PowerManager.prototype.getGeneratedPower = function(census) {
+  return census.coalPowerPop * COAL_POWER_STRENGTH +
+         census.nuclearPowerPop * NUCLEAR_POWER_STRENGTH;
+};
 
 
 PowerManager.prototype.setTilePower = function(x, y) {
@@ -72,9 +112,12 @@ PowerManager.prototype.doPowerScan = function(census) {
   // Clear power this._map.
   this.powerGridMap.clear();
 
-  // Power that the combined coal and nuclear power plants can deliver.
-  var maxPower = census.coalPowerPop * COAL_POWER_STRENGTH +
-                 census.nuclearPowerPop * NUCLEAR_POWER_STRENGTH;
+  // Power the grid can deliver: the city's own plants, plus imports, less exports.
+  var maxPower = this.getCapacity(census);
+
+  this.lastCapacity = maxPower;
+  this.lastGenerated = this.getGeneratedPower(census);
+  this.lastScanCompleted = false;
 
   var powerConsumption = 0; // Amount of power used.
 
@@ -85,6 +128,7 @@ PowerManager.prototype.doPowerScan = function(census) {
     do {
       powerConsumption++;
       if (powerConsumption > maxPower) {
+        this.lastConsumption = powerConsumption;
         this._emitEvent(NOT_ENOUGH_POWER);
         return;
       }
@@ -110,6 +154,9 @@ PowerManager.prototype.doPowerScan = function(census) {
         this._powerStack.push(new Position(pos.x, pos.y));
     } while (conNum);
   }
+
+  this.lastConsumption = powerConsumption;
+  this.lastScanCompleted = true;
 };
 
 

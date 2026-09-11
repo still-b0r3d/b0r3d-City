@@ -35,6 +35,23 @@ var handleCoverageBuilding = function(censusStat, effect) {
 };
 
 
+// The Recycling Centre is a coverage building pointed the other way: same map, same
+// smoothing, same halving when it is unpowered or off the road network, but its score
+// is subtracted from pollution instead of added to land value. Its own map rather than
+// a negative entry in civicBuildingMap, because the two are consumed at different
+// points of pollutionTerrainLandValueScan -- land value is computed per 2x2 block
+// before the pollution readings have been smoothed, and this has to apply after.
+var handleCleanupBuilding = function(censusStat, effect) {
+  return function(map, x, y, simData) {
+    simData.census[censusStat] += 1;
+    var boost = Math.floor(applyCoverageModifiers(map, x, y, simData, effect));
+
+    var wasteMap = simData.blockMaps.wasteMap;
+    wasteMap.worldSet(x, y, wasteMap.worldGet(x, y) + boost);
+  };
+};
+
+
 // School, University, Casino, Arcade and Data Centre instead feed straight into
 // valves.js's residential/commercial/industrial demand formula as a citywide nudge
 // (see VALVE_MAX_BOOST there, and the `valve`/`weight` fields each carries in the
@@ -53,13 +70,25 @@ var handleDemandBuilding = function(censusStat) {
 // feed this building's count into the auto-hospital's own needHospital/eval-score
 // logic. Dispatches generically on each registry entry's effect.type instead of one
 // hand-written handler per building.
-var buildingHandlers = CUSTOM_BUILDINGS.map(function(building) {
-  var effect = building.effect;
-  var handler = effect.type === 'coverage'
-    ? handleCoverageBuilding(effect.censusStat, effect.landValueEffect)
-    : handleDemandBuilding(effect.censusStat);
+var makeHandler = function(effect) {
+  switch (effect.type) {
+    case 'coverage':
+      return handleCoverageBuilding(effect.censusStat, effect.landValueEffect);
 
-  return { centreTile: building.centreTile, handler: handler };
+    case 'cleanup':
+      return handleCleanupBuilding(effect.censusStat, effect.pollutionEffect);
+
+    case 'demand':
+      return handleDemandBuilding(effect.censusStat);
+
+    default:
+      throw new Error('Unknown custom building effect type "' + effect.type + '"');
+  }
+};
+
+
+var buildingHandlers = CUSTOM_BUILDINGS.map(function(building) {
+  return { centreTile: building.centreTile, handler: makeHandler(building.effect) };
 });
 
 

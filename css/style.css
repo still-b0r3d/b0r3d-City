@@ -428,7 +428,12 @@ nav li {
   opacity: 0.55;
 }
 
-#budgetForm > div:nth-child(9) {
+/* The OK/Cancel row, which wants the full width rather than the 230px column the
+   rule below gives every other div in the form. Was `> div:nth-child(9)`, i.e. "the
+   ninth thing in the form, whatever that turns out to be" -- which stopped being the
+   button row the moment the Ordinances and Power contracts lines were added above it,
+   and would have gone wrong again on any later addition. Addressed by its own id now. */
+#budgetForm > #budgetButtons {
   align: center;
   width: 100%;
 }
@@ -446,6 +451,118 @@ nav li {
 #budgetReset {
   color: white;
   background-color: dodgerblue;
+}
+
+/* City ordinances (src/ordinanceWindow.js) and the neighbouring cities
+   (src/neighbourWindow.js). Both windows build their own rows at open time, so there
+   is nothing in index.html for these to hang off but the two list containers -- every
+   class below is applied in JS. Both lists scroll rather than growing the dialog: eight
+   ordinances already make a tall window, and the modal has to keep its OK button
+   reachable on a short screen. */
+#ordinanceList, #neighbourList {
+  max-height: 340px;
+  overflow-y: auto;
+  margin: 6px 0;
+}
+
+.ordinanceRow, .neighbourRow {
+  padding: 6px 4px;
+  border-bottom: 1px solid #ddd;
+  font-size: 12px;
+}
+
+.ordinanceRow:last-child, .neighbourRow:last-child {
+  border-bottom: none;
+}
+
+.ordinanceLabel {
+  font-weight: bold;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+.ordinanceCost, .neighbourRowCost {
+  float: right;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.ordinanceBlurb, .neighbourBlurb, .neighbourRates {
+  margin: 2px 0 0 22px;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.75;
+}
+
+/* An ordinance that cannot be enacted right now keeps its row, greyed, with the reason
+   in place of the blurb -- a policy that silently vanished from the list would be a
+   worse mystery than one that says why it is unavailable. */
+.ordinanceBlocked {
+  opacity: 0.5;
+}
+
+#ordinanceTotal, #neighbourPower {
+  padding: 6px;
+  font-weight: bold;
+  font-size: 12px;
+  background-color: #f2f2f2;
+  border-radius: 3px;
+}
+
+/* Empty except in the one situation it warns about, so it takes no room the rest of
+   the time -- :empty rather than a class toggled from JS, since "is there any text in
+   here" is exactly the condition. */
+#neighbourWarning {
+  margin-top: 4px;
+  padding: 6px;
+  font-size: 11px;
+  color: #7a3b00;
+  background-color: #fdf0d5;
+  border-radius: 3px;
+}
+
+#neighbourWarning:empty {
+  display: none;
+}
+
+.neighbourName {
+  font-weight: bold;
+}
+
+.neighbourRelations {
+  float: right;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.neighbourRates {
+  margin-left: 0;
+}
+
+.neighbourControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.neighbourControls select {
+  flex: 0 0 auto;
+}
+
+.neighbourControls input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+}
+
+.neighbourReadout {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.neighbourCooloff {
+  opacity: 0.5;
 }
 
 #congratsHeader {
@@ -1021,6 +1138,16 @@ nav li {
 
 #settingsHeader, #settingsRequest {
   background-color: #663399;
+  color: white;
+}
+
+#ordinanceHeader, #ordinanceRequest {
+  background-color: #8b5a2b;
+  color: white;
+}
+
+#neighbourHeader, #neighbourRequest {
+  background-color: #2f6f6f;
   color: white;
 }
 

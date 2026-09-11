@@ -30,7 +30,9 @@ import { InputStatus } from './inputStatus.js';
 import { MapWindow } from './mapWindow.js';
 import * as Messages from './messages.ts';
 import { MonsterTV } from './monsterTV.js';
+import { NeighbourWindow } from './neighbourWindow.js';
 import { Notification } from './notification.js';
+import { OrdinanceWindow } from './ordinanceWindow.js';
 import { Panel } from './panel.js';
 import { QueryWindow } from './queryWindow.js';
 import { RCI } from './rci.js';
@@ -205,7 +207,10 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
       policeRate: Math.floor(this.simulation.budget.policePercent * 100),
       taxRate: this.simulation.budget.cityTax,
       totalFunds: this.simulation.budget.totalFunds,
-      taxesCollected: this.simulation.budget.taxFund
+      taxesCollected: this.simulation.budget.taxFund,
+      // Reported, not adjustable -- see the note beside these two in index.html.
+      ordinanceBudget: this.simulation.budget.ordinanceBudget,
+      neighbourBudget: this.simulation.budget.neighbourBudget
     };
 
     return [budgetData];
@@ -214,6 +219,39 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   this.budgetWindow = new BudgetWindow(opacityLayerID, 'budget');
   this.budgetWindow.addEventListener(Messages.BUDGET_WINDOW_CLOSED, this.handleBudgetWindowClosure.bind(this));
   this.inputStatus.addEventListener(Messages.BUDGET_REQUESTED, this.handleBudgetRequest.bind(this));
+
+  // ... city ordinances. The window is handed two functions rather than a snapshot of
+  // which policies are in force, because one of the eight has a precondition it checks
+  // against the live census (see nuclearFreeZone in ordinances.js) and the answer can
+  // differ between one opening of the window and the next.
+  this.handleOrdinanceRequest = makeWindowOpenHandler('ordinance', function() {
+    var ordinances = this.simulation.ordinances;
+    var census = this.simulation.getCensus();
+
+    return [{
+      census: census,
+      isEnacted: ordinances.isEnacted.bind(ordinances),
+      blockedReason: function(id) { return ordinances.blockedReason(id, census); }
+    }];
+  }.bind(this));
+
+  this.ordinanceWindow = new OrdinanceWindow(opacityLayerID, 'ordinanceWindow');
+  this.ordinanceWindow.addEventListener(Messages.ORDINANCE_WINDOW_CLOSED, this.handleOrdinanceWindowClosure.bind(this));
+  this.inputStatus.addEventListener(Messages.ORDINANCE_WINDOW_REQUESTED, this.handleOrdinanceRequest.bind(this));
+
+  // ... and the neighbouring cities, which additionally want the state of the power
+  // grid: a contract to sell electricity is a decision about headroom before it is a
+  // decision about money, and nothing else in the game reports headroom.
+  this.handleNeighbourRequest = makeWindowOpenHandler('neighbour', function() {
+    var neighbours = this.simulation.neighbours;
+    var power = this.simulation.getPowerReport();
+
+    return [{ neighbours: neighbours.getSummary(), power: power }];
+  }.bind(this));
+
+  this.neighbourWindow = new NeighbourWindow(opacityLayerID, 'neighbourWindow');
+  this.neighbourWindow.addEventListener(Messages.NEIGHBOUR_WINDOW_CLOSED, this.handleNeighbourWindowClosure.bind(this));
+  this.inputStatus.addEventListener(Messages.NEIGHBOUR_WINDOW_REQUESTED, this.handleNeighbourRequest.bind(this));
 
   // ... and also the disaster window
   this.disasterWindow = new DisasterWindow(opacityLayerID, 'disasterWindow');
@@ -321,7 +359,8 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   var floatableModalIDs = [
     'budget', 'evalWindow', 'disasterWindow', 'queryWindow', 'congratsWindow',
     'saveWindow', 'screenshotLinkWindow', 'screenshotWindow', 'settingsWindow',
-    'debugWindow', 'highScoreWindow', 'touchWarnWindow', 'mapWindow', 'graphWindow'
+    'debugWindow', 'highScoreWindow', 'touchWarnWindow', 'mapWindow', 'graphWindow',
+    'ordinanceWindow', 'neighbourWindow'
   ];
 
   // Per-window Panel options, for the ones that want more than a drag handle. Only the
@@ -862,6 +901,30 @@ Game.prototype.handleQueryRequest = makeWindowOpenHandler('query');
 Game.prototype.handleScreenshotRequest = makeWindowOpenHandler('screenshot');
 
 
+Game.prototype.handleOrdinanceWindowClosure = function(data) {
+  this._deregisterWindow(this.ordinanceWindow);
+
+  if (data.cancelled)
+    return;
+
+  // The window hands back the state of every checkbox rather than a diff; setEnacted
+  // works out what actually changed, and rechecks any precondition on the way through.
+  this.simulation.ordinances.setEnacted(data.enacted, this.simulation.getCensus());
+};
+
+
+Game.prototype.handleNeighbourWindowClosure = function(data) {
+  this._deregisterWindow(this.neighbourWindow);
+
+  if (data.cancelled)
+    return;
+
+  data.deals.forEach(function(deal) {
+    this.simulation.neighbours.setDeal(deal.id, deal.dealType, deal.amount);
+  }.bind(this));
+};
+
+
 Game.prototype.handleMandatoryBudget = function() {
   this.simNeededBudget = true;
   this.handleBudgetRequest();
@@ -879,6 +942,17 @@ Game.prototype.handleTool = function(data) {
     return;
 
   var tool = this.inputStatus.currentTool;
+
+  // An ordinance can put a tool out of reach -- today only the Nuclear-Free Zone does,
+  // and only to the nuclear plant. Checked here rather than by disabling the button,
+  // because the toolbar is rendered once at startup and policy changes throughout the
+  // game; the tool stays selectable and says why it did nothing, which is the same
+  // thing "needs bulldozing" does a few lines below.
+  var blockedBy = this.simulation.ordinances.getModifiers().blockedTools[this.inputStatus.toolName];
+  if (blockedBy !== undefined) {
+    $('#toolOutput').text(blockedBy + ' forbids this');
+    return;
+  }
 
   var budget = this.simulation.budget;
   var evaluation = this.simulation.evaluation;

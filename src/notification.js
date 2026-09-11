@@ -96,14 +96,23 @@ var handleClick = function(e) {
 };
 
 
+// Most messages are a fixed string in Text.messageText. The neighbour notices have to
+// name the town that raised its rate or walked away, so their entries are functions of
+// the message's own data instead -- see text.js.
+var textOf = function(message) {
+  var entry = Text.messageText[message.subject];
+  return typeof entry === 'function' ? entry(message.data) : entry;
+};
+
+
 Notification.prototype.createMessage = function(message) {
 
   if (message.hasOwnProperty('data') && message.data !== undefined && message.data.hasOwnProperty('x') && message.data.hasOwnProperty('y')) {
-    this._displayLink(Text.messageText[message.subject], message.data.x, message.data.y);
+    this._displayLink(textOf(message), message.data.x, message.data.y);
     return;
   }
 
-  this._displayText(Text.messageText[message.subject]);
+  this._displayText(textOf(message));
 };
 
 

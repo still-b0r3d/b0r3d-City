@@ -124,7 +124,12 @@ function commonOptions() {
     },
     output: {
       path: path.resolve(__dirname, OUTPUT_DIRECTORY),
-      filename: 'src/micropolis.js'
+      filename: 'src/micropolis.js',
+      // Lazily-loaded chunks -- today only the dev menu (src/dev/, fetched only with
+      // ?dev=1). Content-hashed, unlike the main bundle (which HtmlWebpackPlugin
+      // cache-busts with a query string instead), because nothing stamps a query onto
+      // a URL webpack's runtime builds for itself.
+      chunkFilename: 'src/[name].[contenthash:8].js'
     },
     plugins: [
       cleanUpLeftovers(),

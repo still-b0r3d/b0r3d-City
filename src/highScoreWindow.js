@@ -163,6 +163,16 @@ HighScoreWindow.prototype.open = function(data) {
 };
 
 
+// Game calls this whenever a cheat is used (see Game.markCheatsUsed), so a window
+// that's already open when it happens loses its submit form there and then, instead of
+// waiting to be closed and reopened. Harmless while closed: open() sets it all again.
+HighScoreWindow.prototype.markCheatsUsed = function() {
+  this._cheatsUsed = true;
+  $(highScoreFormID).hide();
+  $(highScoreStatusID).text('Score submission is disabled for this city — cheats were used.');
+};
+
+
 HighScoreWindow.classNameToLevel = function(className) {
   var idx = CLASS_LABELS.indexOf(className);
   return idx === -1 ? 1 : idx + 1;

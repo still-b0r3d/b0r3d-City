@@ -14,6 +14,7 @@
 import $ from "jquery";
 
 import { Config } from './config.js';
+import { DevMode } from './devMode.js';
 import { Game } from './game.js';
 import { GameMap } from './gameMap.js';
 import { reflowTileValue } from './legacyTileFormat.js';
@@ -100,6 +101,16 @@ function SplashScreen(tileSet, spriteSheet) {
   // Let's get some bits on screen!
   $('.awaitGeneration').toggle();
   $('#splashPlay').focus();
+
+  // The dev menu can launch from here, and may have left a city to launch on reload.
+  DevMode.setSplash(this);
+  var autostart = DevMode.takeAutostart();
+  if (autostart) {
+    this.devLaunch(autostart).catch(function(err) {
+      console.error('Dev quick-start failed', err);
+      window.alert('Dev quick-start failed: ' + err.message);
+    });
+  }
 }
 
 
@@ -112,19 +123,85 @@ var regenerateMap = function(e) {
 };
 
 
-// Exposes a small console-accessible cheat API for development/testing use,
-// mirroring the in-game Cheat Menu actions. See devtools console:
-// window.b0r3dCheats.addFunds(100000), .setFreeBuild(true),
-// .triggerDisaster('fire'|'flood'|'tornado'|'monster'|'meltdown'|'crash'),
-// .getState()
-var exposeCheatAPI = function(g) {
-  window.b0r3dCheats = {
-    game: g,
-    addFunds: function(amount) { g.cheatAddFunds(amount); },
-    setFreeBuild: function(enabled) { g.cheatSetFreeBuild(enabled); },
-    triggerDisaster: function(name) { g.cheatTriggerDisaster(name); },
-    getState: function() { return g.cheatGetState(); }
+// Every launch path ends here. With the dev menu on (?dev=1) this hands the game to
+// the menu and exposes the window.b0r3dCheats console API (.addFunds(amount),
+// .setFreeBuild(bool), .triggerDisaster(name), .getState(), .game); with it off it
+// does nothing at all -- see devMode.js.
+var gameStarted = function(g) {
+  DevMode.gameStarted(g);
+};
+
+
+// Hides whichever splash-screen form happens to be up and drops their listeners, for
+// the dev menu's quick-start, which can launch from any of them.
+var dismissSplash = function() {
+  $('#splashLoad, #splashGenerate, #splashPlay, #loadBack, #splashScenarios, #scenarioBack, ' +
+    '#splashFullScenarios, #fullScenarioBack').off('click');
+  $('#playForm').off('submit');
+  $('#splash, #loadList, #scenarioList, #fullScenarioList, #start').hide();
+};
+
+
+// The dev menu's quick-start (see src/dev/panel.js): launches a city with no forms in
+// the way, either straight from the splash screen or from an autostart request left
+// behind by a reload. request.kind is 'generated', 'classic' (request.slug is one of
+// SCENARIO_CITIES), 'scenario' (a SCENARIOS slug), 'slot' (a save id) or 'data' (a
+// whole save object, from the menu's import box). Returns a promise for the Game.
+SplashScreen.prototype.devLaunch = function(request) {
+  var self = this;
+  var difficulty = request.difficulty === undefined ? Simulation.LEVEL_EASY : request.difficulty;
+
+  var launch = function(map, name) {
+    dismissSplash();
+    var g = new Game(map, self.tileSet, self.spriteSheet, difficulty, name);
+    gameStarted(g);
+    return g;
   };
+
+  switch (request.kind) {
+    case 'generated':
+      return Promise.resolve(launch(MapGenerator(), request.name || 'DevTown'));
+
+    case 'classic':
+      var city = SCENARIO_CITIES.filter(function(c) { return c.slug === request.slug; })[0];
+      if (!city)
+        return Promise.reject(new Error('No classic city called ' + request.slug));
+
+      return loadCityMap(city.slug).then(function(map) {
+        return launch(map, request.name || city.name);
+      });
+
+    case 'scenario':
+      var scenario = SCENARIOS.filter(function(s) { return s.slug === request.slug; })[0];
+      if (!scenario)
+        return Promise.reject(new Error('No scenario called ' + request.slug));
+
+      return loadCityMap(scenario.mapSlug).then(function(map) {
+        map.scenario = scenario;
+        return launch(map, request.name || scenario.name);
+      });
+
+    case 'slot':
+      var saved = Storage.getSave(request.id);
+      if (saved === null)
+        return Promise.reject(new Error('No readable save ' + request.id));
+
+      return Promise.resolve(launch(saved));
+
+    case 'data':
+      var data = request.data;
+      if (!data || !Array.isArray(data.map))
+        return Promise.reject(new Error("That isn't a b0r3d-city save"));
+
+      if (data.version !== Storage.CURRENT_VERSION)
+        Storage.transitionOldSave(data);
+
+      data.isSavedGame = true;
+      return Promise.resolve(launch(data));
+
+    default:
+      return Promise.reject(new Error('Unknown quick-start kind ' + request.kind));
+  }
 };
 
 
@@ -341,7 +418,7 @@ var loadSave = function(e) {
 
   // Launch
   var g = new Game(savedGame, this.tileSet, this.spriteSheet, Simulation.LEVEL_EASY);
-  exposeCheatAPI(g);
+  gameStarted(g);
 };
 
 
@@ -386,8 +463,8 @@ var play = function(e) {
 
   // Launch a new game
   var g = new Game(this.map, this.tileSet, this.spriteSheet, difficulty, name);
-  exposeCheatAPI(g);
+  gameStarted(g);
 };
 
 
-export { SplashScreen };
+export { SplashScreen, SCENARIO_CITIES };

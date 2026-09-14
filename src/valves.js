@@ -24,6 +24,11 @@ var Valves = EventEmitter(function () {
   this.resCap = false;
   this.comCap = false;
   this.indCap = false;
+
+  // Set only by the dev menu (src/dev/panel.js): {res, com, ind}, each a number to hold
+  // that valve at or null to leave it alone. Applied as the last step of setValves, so
+  // it outlasts the recalculation that would otherwise undo it two cycles later.
+  this.devPin = null;
 });
 
 
@@ -225,7 +230,24 @@ Valves.prototype.setValves = function(gameLevel, census, budget, modifiers) {
   if (this.indCap && this.indValve > 0)
       this.indValve = 0;
 
+  this.applyDevPin();
   this._emitEvent(VALVES_UPDATED);
+};
+
+
+// Also called by the dev menu directly, so a pin shows on the demand graph at once
+// rather than at the next recalculation.
+Valves.prototype.applyDevPin = function() {
+  var pin = this.devPin;
+  if (!pin)
+    return;
+
+  if (typeof pin.res === 'number')
+    this.resValve = MiscUtils.clamp(pin.res, -RES_VALVE_RANGE, RES_VALVE_RANGE);
+  if (typeof pin.com === 'number')
+    this.comValve = MiscUtils.clamp(pin.com, -COM_VALVE_RANGE, COM_VALVE_RANGE);
+  if (typeof pin.ind === 'number')
+    this.indValve = MiscUtils.clamp(pin.ind, -IND_VALVE_RANGE, IND_VALVE_RANGE);
 };
 
 

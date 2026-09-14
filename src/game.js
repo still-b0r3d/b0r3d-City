@@ -458,7 +458,9 @@ Game.prototype.handleMainMenuRequest = function() {
 };
 
 
-Game.prototype.save = function(saveName) {
+// Everything a save holds, without writing it anywhere. save() below stores it; the dev
+// menu's export shows it.
+Game.prototype.getSaveData = function() {
   var saveData = {name: this.name, everClicked: this.everClicked, cheatsUsed: this._cheatsUsed};
   BaseTool.save(saveData);
   this.simulation.save(saveData);
@@ -468,6 +470,13 @@ Game.prototype.save = function(saveName) {
   // city with the goal, the clock and the year all quietly discarded.
   if (this.scenarioController)
     this.scenarioController.save(saveData);
+
+  return saveData;
+};
+
+
+Game.prototype.save = function(saveName) {
+  var saveData = this.getSaveData();
 
   var meta = {
     population: this.simulation.evaluation.cityPop,
@@ -741,8 +750,21 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
 };
 
 
-Game.prototype.cheatAddFunds = function(amount) {
+// The one way a city becomes ineligible for the leaderboard, shared by the Settings
+// cheat menu below and everything in the dev menu (src/dev/) that changes the city.
+// One-way: nothing ever sets it back.
+//
+// Also closes the door on a High Scores window that's already open. That window reads
+// the flag once, when it opens, so a cheat used while it sat there used to leave its
+// submit form live for a city that no longer qualified.
+Game.prototype.markCheatsUsed = function() {
   this._cheatsUsed = true;
+  this.highScoreWindow.markCheatsUsed();
+};
+
+
+Game.prototype.cheatAddFunds = function(amount) {
+  this.markCheatsUsed();
   this.simulation.budget.spend(-amount);
 };
 
@@ -750,13 +772,13 @@ Game.prototype.cheatAddFunds = function(amount) {
 Game.prototype.cheatSetFreeBuild = function(enabled) {
   // Only turning it on counts as "using" it -- switching it back off isn't itself a cheat
   if (enabled)
-    this._cheatsUsed = true;
+    this.markCheatsUsed();
   BaseTool.setFreeBuild(enabled);
 };
 
 
 Game.prototype.cheatTriggerDisaster = function(name) {
-  this._cheatsUsed = true;
+  this.markCheatsUsed();
 
   switch (name) {
     case 'fire':
@@ -1284,13 +1306,13 @@ var tick = function() {
 };
 
 
-var commonAnimate = function() {
-  if (this.dialogShowing) {
-    nextFrame(this.animate);
-    return;
-  }
-
-  if (!this.isPaused)
+// One frame's worth of sprite movement and painting, with no scheduling of its own.
+// Split out of commonAnimate so the dev menu can draw a frame by hand: the Browser
+// pane's hidden tab never fires requestAnimationFrame, and calling commonAnimate
+// directly from there would also start a second animation loop the moment rAF resumed.
+// moveSprites false paints without advancing anything.
+Game.prototype.paintFrame = function(moveSprites) {
+  if (moveSprites !== false && !this.isPaused)
     this.simulation.spriteManager.moveObjects(this.simulation._constructSimData());
 
   var sprites = this.calculateSpritesForPaint(this.gameCanvas);
@@ -1303,6 +1325,16 @@ var commonAnimate = function() {
   // at. Only the box is repainted here, not the map data underneath it (that's
   // DATE_UPDATED's job) -- and the whole call is a no-op while the window is closed.
   this.mapWindow.refreshViewport();
+};
+
+
+var commonAnimate = function() {
+  if (this.dialogShowing) {
+    nextFrame(this.animate);
+    return;
+  }
+
+  this.paintFrame();
 
   nextFrame(this.animate);
 };

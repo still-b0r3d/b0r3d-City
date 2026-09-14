@@ -260,6 +260,25 @@ Simulation.prototype.simTick = function() {
 };
 
 
+// Runs up to `phases` simulation phases back to back, ignoring the speed setting's
+// wall-clock throttle -- the dev menu's step and fast-forward (see src/dev/panel.js). 16
+// phases make one tick of city time and 64 a month. Stops early, and says how far it
+// got, if the city wants a budget decision first, the same condition _simFrame waits
+// on. The sim data is rebuilt every phase rather than once because it carries a copy of
+// _cityTime, which moves during a run this long.
+Simulation.prototype.devStep = function(phases) {
+  for (var i = 0; i < phases; i++) {
+    if (this.budget.awaitingValues)
+      return i;
+
+    this._simulate(this._constructSimData());
+    this._updateTime();
+  }
+
+  return phases;
+};
+
+
 Simulation.prototype._simFrame = function() {
   if (this.budget.awaitingValues)
     return;

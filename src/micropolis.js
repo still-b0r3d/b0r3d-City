@@ -14,6 +14,7 @@
 import $ from "jquery";
 
 import { Config } from './config.js';
+import { DevMode } from './devMode.js';
 import { SiteEnv } from './siteEnv.js';
 import { SplashScreen } from './splashScreen.js';
 import { TileSet } from './tileSet.js';
@@ -89,6 +90,18 @@ if (document.fonts && document.fonts.ready)
 Config.debug = window.location.search.slice(1).split('&').some(function(param) {
   return param.trim().toLowerCase() === 'debug=1';
 });
+
+
+// The dev menu (?dev=1, see devMode.js) is its own chunk, fetched only while it's on.
+// Mounted now rather than once a city is running, so it's already there on the splash
+// screen, where its quick-start lives.
+if (DevMode.isEnabled()) {
+  import(/* webpackChunkName: "dev" */ './dev/panel.js').then(function(module) {
+    module.mountDevPanel();
+  }).catch(function(err) {
+    console.error('The dev menu failed to load', err);
+  });
+}
 
 
 // The beta build (anywhere but the main site) gets a visible label so it's

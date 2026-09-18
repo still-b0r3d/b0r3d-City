@@ -20,6 +20,7 @@ import { GameMap } from './gameMap.js';
 import { reflowTileValue } from './legacyTileFormat.js';
 import { MapGenerator } from './mapGenerator.js';
 import { MiscUtils } from './miscUtils.js';
+import { SaveTransfer } from './saveTransfer.js';
 import { SCENARIOS } from './scenarios.js';
 import { Simulation } from './simulation.js';
 import { SplashCanvas } from './splashCanvas.js';
@@ -84,15 +85,17 @@ function SplashScreen(tileSet, spriteSheet) {
   $('#splashGenerate').click(regenerateMap.bind(this));
   $('#splashPlay').click(acquireNameAndDifficulty.bind(this));
   $('#splashLoad').click(showLoadList.bind(this));
+  $('#loadImport').click(importSave.bind(this));
   $('#loadBack').click(hideLoadList.bind(this));
   $('#splashScenarios').click(showScenarioList.bind(this));
   $('#scenarioBack').click(hideScenarioList.bind(this));
   $('#splashFullScenarios').click(showFullScenarioList.bind(this));
   $('#fullScenarioBack').click(hideFullScenarioList.bind(this));
 
-  // Conditionally enable load/save buttons
+  // Conditionally enable load/save buttons. Load Game stays open with no saves at
+  // all, since importing one from a file happens from there.
   $('#saveRequest').prop('disabled', !Storage.canStore);
-  $('#splashLoad').prop('disabled', !(Storage.canStore && Storage.listSaves().length > 0));
+  $('#splashLoad').prop('disabled', !Storage.canStore);
 
   // Paint the minimap
   this.splashCanvas = new SplashCanvas('splashContainer', tileSet);
@@ -135,7 +138,7 @@ var gameStarted = function(g) {
 // Hides whichever splash-screen form happens to be up and drops their listeners, for
 // the dev menu's quick-start, which can launch from any of them.
 var dismissSplash = function() {
-  $('#splashLoad, #splashGenerate, #splashPlay, #loadBack, #splashScenarios, #scenarioBack, ' +
+  $('#splashLoad, #splashGenerate, #splashPlay, #loadImport, #loadBack, #splashScenarios, #scenarioBack, ' +
     '#splashFullScenarios, #fullScenarioBack').off('click');
   $('#playForm').off('submit');
   $('#splash, #loadList, #scenarioList, #fullScenarioList, #start').hide();
@@ -216,14 +219,15 @@ var renderLoadList = function(self) {
   var saves = Storage.listSaves();
 
   if (!saves.length) {
-    $('#loadRows').html('<tr><td colspan="4">No saves yet.</td></tr>');
+    $('#loadRows').html('<tr><td colspan="5">No saves yet.</td></tr>');
     return;
   }
 
   var rows = saves.map(function(entry) {
     return '<tr><td>' + escapeHtml(entry.name) + '</td><td>' + escapeHtml(describeSave(entry)) +
-      '</td><td><button type="button" class="loadRowLoad" data-id="' + escapeHtml(entry.id) + '">Load</button></td>' +
-      '<td><button type="button" class="cancel loadRowDelete" data-id="' + escapeHtml(entry.id) + '">Delete</button></td></tr>';
+      '</td><td><button type="button" class="saveRowButton loadRowLoad" data-id="' + escapeHtml(entry.id) + '">Load</button></td>' +
+      '<td><button type="button" class="saveRowButton loadRowExport" data-id="' + escapeHtml(entry.id) + '">Export</button></td>' +
+      '<td><button type="button" class="saveRowButton cancel loadRowDelete" data-id="' + escapeHtml(entry.id) + '">Delete</button></td></tr>';
   });
 
   $('#loadRows').html(rows.join(''));
@@ -232,19 +236,54 @@ var renderLoadList = function(self) {
     loadSave.call(self, e);
   });
 
+  $('.loadRowExport').on('click', function() {
+    if (!SaveTransfer.download($(this).data('id')))
+      $('#loadStatus').text("That save couldn't be read, so there was nothing to export.");
+  });
+
   $('.loadRowDelete').on('click', function() {
     var id = $(this).data('id');
     if (window.confirm('Delete this save? This cannot be undone.')) {
       Storage.deleteSave(id);
+      $('#loadStatus').text('');
       renderLoadList(self);
-      $('#splashLoad').prop('disabled', !(Storage.canStore && Storage.listSaves().length > 0));
     }
+  });
+};
+
+
+// Import a save from a file into a slot (see Storage.parseSaveFile). It goes into the
+// list rather than straight into a running game so it's there next time too, which is
+// the point of carrying a city over from another browser or the desktop build. Same
+// rules as saving: a name that's already taken asks before overwriting, and the cap
+// still applies to a new one.
+var importSave = function(e) {
+  e.preventDefault();
+  var self = this;
+
+  SaveTransfer.pick(function(result, fileName) {
+    $('#loadStatus').text('');
+
+    if (!result.ok) {
+      $('#loadStatus').text(SaveTransfer.describeFailure(result, fileName));
+      return;
+    }
+
+    var existing = Storage.findSave(result.name);
+    if (existing && !window.confirm('You already have a save called "' + existing.name +
+        '". Replace it with the one from "' + fileName + '"?'))
+      return;
+
+    var saved = Storage.saveGame(result.name, result.game, result.meta);
+    $('#loadStatus').text(saved.ok ? 'Imported "' + result.name + '".' : SaveTransfer.describeFailure(saved, fileName));
+    renderLoadList(self);
   });
 };
 
 
 var showLoadList = function(e) {
   e.preventDefault();
+  $('#loadStatus').text('');
   renderLoadList(this);
   $('#splash').toggle();
   $('#loadList').toggle();

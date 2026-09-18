@@ -16,6 +16,7 @@ import $ from "jquery";
 import { SAVE_WINDOW_CLOSED } from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
 import { ModalWindow } from './modalWindow.js';
+import { SaveTransfer } from './saveTransfer.js';
 import { Storage } from './storage.js';
 import { Text } from './text.js';
 
@@ -48,13 +49,22 @@ var renderSaves = function(saves) {
   var rows = saves.map(function(entry) {
     return '<tr><td class="pointer saveRowName" data-name="' + escapeHtml(entry.name) + '">' +
       escapeHtml(entry.name) + '</td><td>' + escapeHtml(describeSave(entry)) +
-      '</td><td><button type="button" class="cancel saveRowDelete" data-id="' + escapeHtml(entry.id) + '">Delete</button></td></tr>';
+      '</td><td><button type="button" class="saveRowButton saveRowExport" data-id="' + escapeHtml(entry.id) + '">Export</button></td>' +
+      '<td><button type="button" class="saveRowButton cancel saveRowDelete" data-id="' + escapeHtml(entry.id) + '">Delete</button></td></tr>';
   });
 
   $(saveRowsID).html(rows.join(''));
 
   $('.saveRowName').on('click', function() {
     $(saveNameID).val($(this).data('name')).focus();
+  });
+
+  // Export is here as well as on the Load list so a city can go out as a file right
+  // after it's saved, without leaving the game to do it. Importing stays on the Load
+  // list: an imported save is for loading, and this window is mid-game.
+  $('.saveRowExport').on('click', function() {
+    if (!SaveTransfer.download($(this).data('id')))
+      $(saveStatusID).text("That save couldn't be read, so there was nothing to export.");
   });
 
   $('.saveRowDelete').on('click', function() {

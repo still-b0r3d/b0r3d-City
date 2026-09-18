@@ -197,6 +197,74 @@ var deleteSave = function(id) {
 };
 
 
+// Saves as files. localStorage is per origin, so a city saved on b0r3d.org is invisible
+// to the desktop build, to the online launcher (its own Electron profile, not the
+// player's browser), and to any other machine -- there is no account to sync through.
+// A file is the bridge: the slot's blob wrapped with what the index knows about it
+// (its name, when it was saved, the summary the lists show), so it lands on the other
+// side as the same named slot. saveTransfer.js does the download/file-picker half.
+//
+// The blob goes out exactly as stored, old version and all -- parseSaveFile migrates
+// on the way in, so a file written by an older game still loads in a newer one.
+var exportSave = function(id) {
+  var matches = readIndex().filter(function(entry) { return entry.id === id; });
+  if (!matches.length)
+    return null;
+
+  try {
+    var raw = window.localStorage.getItem(Storage.KEY_PREFIX + id);
+    if (raw === null)
+      return null;
+
+    return {
+      format: Storage.FILE_FORMAT,
+      name: matches[0].name,
+      savedAt: matches[0].savedAt,
+      meta: matches[0].meta || {},
+      game: JSON.parse(raw)
+    };
+  } catch (e) {
+    console.warn('Could not export save ' + id, e);
+    return null;
+  }
+};
+
+
+// The reverse: the text of a file, back into something saveGame can store. Returns
+// {ok: true, name, meta, game} -- the caller decides about overwriting (see the Load
+// list's import) and then calls saveGame -- or {ok: false, reason}, where reason is
+// 'invalid' (not a save at all) or 'version' (written by a newer game than this one,
+// which transitionOldSave rejects). A bare blob without the wrapper, which is what the
+// dev menu's export produces, is accepted too; it just has no summary to show.
+var parseSaveFile = function(text) {
+  var parsed;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch (e) {
+    return {ok: false, reason: 'invalid'};
+  }
+
+  var wrapped = parsed && parsed.format === Storage.FILE_FORMAT && parsed.game ? parsed : null;
+  var game = wrapped ? wrapped.game : parsed;
+
+  if (!game || !Array.isArray(game.map) || typeof game.version !== 'number')
+    return {ok: false, reason: 'invalid'};
+
+  try {
+    if (game.version !== Storage.CURRENT_VERSION)
+      Storage.transitionOldSave(game);
+  } catch (e) {
+    return {ok: false, reason: 'version'};
+  }
+
+  var name = wrapped && typeof wrapped.name === 'string' && wrapped.name.trim() ? wrapped.name.trim() :
+    (typeof game.name === 'string' && game.name.trim() ? game.name.trim() : 'Imported city');
+
+  return {ok: true, name: name.slice(0, 30), meta: (wrapped && wrapped.meta) || {}, game: game};
+};
+
+
 // Brings a save of any older version up to CURRENT_VERSION, in place. Every case
 // below falls through to the next one: a v1 save needs v1's fixup *and* v2's *and*
 // v3's, so the only `break` in here belongs to the last case. (This is why the
@@ -264,6 +332,8 @@ var Storage = {
   getSave: getSave,
   saveGame: saveGame,
   deleteSave: deleteSave,
+  exportSave: exportSave,
+  parseSaveFile: parseSaveFile,
   transitionOldSave: transitionOldSave
 };
 
@@ -273,6 +343,7 @@ Object.defineProperty(Storage, 'LEGACY_KEY', MiscUtils.makeConstantDescriptor('m
 Object.defineProperty(Storage, 'KEY_PREFIX', MiscUtils.makeConstantDescriptor('micropolisJSGame_'));
 Object.defineProperty(Storage, 'INDEX_KEY', MiscUtils.makeConstantDescriptor('micropolisJSSaveIndex'));
 Object.defineProperty(Storage, 'MAX_SAVES', MiscUtils.makeConstantDescriptor(3));
+Object.defineProperty(Storage, 'FILE_FORMAT', MiscUtils.makeConstantDescriptor('b0r3d-city-save'));
 Object.defineProperty(Storage, 'canStore', MiscUtils.makeConstantDescriptor(canStore()));
 
 

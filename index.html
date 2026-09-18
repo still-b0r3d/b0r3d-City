@@ -71,9 +71,11 @@
         <div id="loadList" class="mintcream shadow padding10 centred">
           <h2 class="chunk alignCenter">Load Game</h2>
           <table id="loadTableEl" class="alignCenter">
-            <thead><tr><th>Name</th><th>Details</th><th></th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Details</th><th></th><th></th><th></th></tr></thead>
             <tbody id="loadRows"></tbody>
           </table>
+          <div id="loadStatus" class="alignCenter padding10"></div>
+          <button id="loadImport" class="width140 block margin10 splashButton">Import a save file</button>
           <button id="loadBack" class="width140 block margin10 splashButton cancel">Back</button>
         </div>
         <div id="scenarioList" class="mintcream shadow padding10 centred">
@@ -525,7 +527,7 @@
           <div id="saveExisting">
             <div class="padding10">Existing saves (click a name to overwrite it):</div>
             <table id="saveTableEl" class="alignCenter">
-              <thead><tr><th>Name</th><th>Details</th><th></th></tr></thead>
+              <thead><tr><th>Name</th><th>Details</th><th></th><th></th></tr></thead>
               <tbody id="saveRows"></tbody>
             </table>
           </div>

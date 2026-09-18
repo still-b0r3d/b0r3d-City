@@ -324,6 +324,12 @@ nav li {
   display: inline-block;
 }
 
+/* Load/Export/Delete on the save lists: three to a row now, so the global 140px
+   button would run the Load Game dialog well past its 500px. */
+.saveRowButton {
+  width: 70px;
+}
+
 .selected {
   font-weight: bold;
   border: 1px solid black;

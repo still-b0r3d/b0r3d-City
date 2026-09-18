@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Version:** 0.89, plus everything under "What's New Since v0.89" below — see [Changelog](#changelog).
+**Version:** 0.89.5 — see [Changelog](#changelog).
 
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
@@ -13,7 +13,7 @@ The code is released under the GPLv3 with some additional terms — see [LICENSE
 
 The web version at the link above is always current. For a desktop build, grab one from [this repo's Releases](https://github.com/still-b0r3d/b0r3d-City/releases):
 
-- **`b0r3d-city.exe`** — the full game, offline. Bundles a snapshot of this version, so it works with no internet connection, but won't pick up anything past v0.89 on its own.
+- **`b0r3d-city.exe`** — the full game, offline. Bundles a snapshot of this version, so it works with no internet connection, but won't pick up anything past v0.89.5 on its own.
 - **`b0r3d-city-online.exe`** — a thin launcher that just opens the live site above in its own window. Needs a connection, but always shows whatever's actually live.
 
 Both are unsigned portable Windows executables — no install required, just run one. Windows SmartScreen may warn on first run.
@@ -22,7 +22,7 @@ Both are unsigned portable Windows executables — no install required, just run
 
 Everything this fork adds on top of the original micropolisJS engine, newest first. See also the in-game [About page](https://b0r3d.org/b0r3d-city/about.html), which carries the same changelog plus a Known Issues section for players.
 
-### What's New Since v0.89
+### Version 0.89.5
 
 - **A developer menu, behind `?dev=1`.** The same switch the site's other games use: add `?dev=1` to the URL once and the menu stays on in that browser until `?dev=0`. It's its own webpack chunk, so nobody who hasn't asked for it downloads a byte of it. Any city it changes is permanently barred from the leaderboard, exactly like the Settings cheat menu. See [Dev menu](#dev-menu) below for what's in it. The `window.b0r3dCheats` console API from v0.89 now only exists with the menu on, rather than on every visitor's page.
 - **Traffic is back on the roads.** The light- and heavy-traffic road tiles &mdash; the cars &mdash; had never once appeared in this fork, even though the v0.89 notes below say the traffic simulation was fixed. It was half fixed. A 2018 upstream refactor swapped in a new `Position` class and left two calls in `tryDrive()` handing it a whole Position where it wanted an `x, y` pair, so every trip a zone tried to make failed on its very first step and `trafficDensityMap` stayed at zero forever; repairing the `pos`/`drivePos` ReferenceError on the next line only exposed this one. The knock-on effects went well past the missing art: every zone got `NO_ROUTE_FOUND` and was scored accordingly, the Traffic overlay on City Maps was blank, the "traffic jams" notices could never fire, the traffic helicopter had nothing to chase, and Bern &mdash; whose whole objective is getting traffic *down* &mdash; won itself after the first year. The animation table, the tile art and the density-to-tile logic in `road.js` were all fine the whole time. Two lines in `traffic.js`.

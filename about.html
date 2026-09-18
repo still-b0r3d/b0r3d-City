@@ -39,9 +39,9 @@
         <p>
           b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, a handmade port of <a href="http://code.google.com/p/micropolis/">Micropolis</a> to Javascript. (Micropolis is the open-source release of a commercial game once sold by Electronic Arts). The aim is to grow your city, balancing the various competing demands. Use the buttons in the toolbox to select the various zones and buildings, and then click on the desired location to build.
         </p>
-        <h3 class="alignCenter chunk">What's New Since v0.89</h3>
+        <h3 class="alignCenter chunk">Version 0.89.5</h3>
         <p>
-          Everything below shipped after v0.89 went out. Newest first.
+          Everything that shipped between v0.89 and v0.89.5. Newest first.
         </p>
         <ul>
           <li><strong>Traffic is back on the roads.</strong> The light- and heavy-traffic road tiles&mdash;the cars&mdash;had never once appeared in this fork, even though the v0.89 notes below say the traffic simulation was fixed. It was half fixed. A 2018 upstream refactor swapped in a new <code>Position</code> class and left two calls handing it a whole Position where it wanted an <code>x, y</code> pair, so every trip a zone tried to make failed on its very first step and the traffic map stayed at zero forever; repairing the crash on the next line only exposed this one. The knock-on effects went well past the missing art: every zone was told there was no route to wherever its people wanted to go, the Traffic overlay on City Maps was blank, the "traffic jams" notices could never fire, the traffic helicopter had nothing to chase, and Bern&mdash;whose whole objective is getting traffic <em>down</em>&mdash;won itself after the first year. The animation, the tile art and the road-density logic were all fine the whole time. Two lines in <code>traffic.js</code>.</li>
@@ -211,7 +211,7 @@
       </div>
     </main>
     <footer id="aboutFooter" class="alignCenter chunk white padding10">
-      <div id="build">v0.89 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+      <div id="build">v0.89.5 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
       <div class="nameLicense">
         Based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, itself a port of the open-source <cite>Micropolis</cite>.
       </div>

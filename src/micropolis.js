@@ -18,7 +18,6 @@ import { DevMode } from './devMode.js';
 import { SiteEnv } from './siteEnv.js';
 import { SplashScreen } from './splashScreen.js';
 import { TileSet } from './tileSet.js';
-import { TileSetURI } from './tileSetURI.ts';
 
 /*
  *
@@ -28,7 +27,7 @@ import { TileSetURI } from './tileSetURI.ts';
  */
 
 
-var fallbackImage, tileSet;
+var tileSet;
 
 
 var onAllTilesLoaded = function() {
@@ -44,26 +43,15 @@ var onAllTilesLoaded = function() {
 
 
 // XXX Replace with an error dialog
-var onFallbackError = function() {
-  fallbackImage.onload = fallbackImage.onerror = null;
-  alert('Failed to load tileset!');
-};
-
-
-var onFallbackLoad = function() {
-  fallbackImage.onload = fallbackImage.onerror = null;
-  tileSet = new TileSet(fallbackImage, onAllTilesLoaded, onFallbackError);
-};
-
-
+//
+// This used to retry with the whole tile sheet baked into the bundle as a data: URI
+// (src/tileSetURI.ts, 156KB), for the one case where slicing the sheet on a canvas
+// throws: a file:// page, whose canvas Chromium treats as tainted. Nothing serves the
+// game that way any more -- the desktop build loads it over its own app:// scheme for
+// exactly this reason -- and the baked copy had been left behind by every building
+// added since, so it was trading a blank-buildings bug for a startup one.
 var tileSetError = function() {
-  // We might be running locally in Chrome, which handles the security context of file URIs differently, which makes
-  // things go awry when we try to create an image from a "tainted" canvas (one we've painted on). Let's try creating
-  // the tileset by URI instead
-  fallbackImage = new Image();
-  fallbackImage.onload = onFallbackLoad;
-  fallbackImage.onerror = onFallbackError;
-  fallbackImage.src = TileSetURI;
+  alert('Failed to load tileset!');
 };
 
 

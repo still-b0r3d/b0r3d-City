@@ -17,7 +17,6 @@ import { BaseTool } from './baseTool.js';
 import { BudgetWindow } from './budgetWindow.js';
 import { Config } from './config.js';
 import { CongratsWindow } from './congratsWindow.js';
-import { CUSTOM_BUILDINGS } from './customBuildings.js';
 import { DebugWindow } from './debugWindow.js';
 import { DisasterWindow } from './disasterWindow.js';
 import { EvaluationWindow } from './evaluationWindow.js';
@@ -45,40 +44,21 @@ import { SettingsWindow } from './settingsWindow.js';
 import { Simulation } from './simulation.js';
 import { Storage } from './storage.js';
 import { Text } from './text.js';
+import { Toolbar } from './toolbar.js';
 import { TouchWarnWindow } from './touchWarnWindow.js';
 
 var disasterTimeout = 20 * 1000;
 
 
-// b0r3d-city's own buildings (Hospital/School/Casino/Library, and any future
-// customBuildings.js entries) aren't hand-authored in index.html -- one toolButton is
-// rendered here per registry entry instead, colour set inline rather than via a
-// per-ID CSS rule (see customBuildings.js and css/style.css's "Tool buttons" comment).
-var renderCustomBuildingButtons = function() {
-  var buttons = $('#buttons');
-
-  CUSTOM_BUILDINGS.forEach(function(building) {
-    // Idempotent: Game() can in principle run more than once per page load (load a
-    // second save, start a new game after one already ran), and #buttons is never
-    // cleared between them -- skip a building whose button is already there rather
-    // than appending a duplicate.
-    if ($('#' + building.id + 'Button').length > 0)
-      return;
-
-    var button = $('<button>')
-      .attr('id', building.id + 'Button')
-      .attr('data-size', building.size)
-      .attr('data-tool', building.id)
-      .attr('data-colour', building.colour)
-      .addClass('toolButton unselected')
-      .text(building.label + ' $' + building.cost)
-      .css('background-color', building.colour);
-
-    if (building.textColour)
-      button.css('color', building.textColour);
-
-    buttons.append(button);
-  });
+// The sandbox (Settings' "cheat menu" toggle) shows two unrelated things, which is why
+// this exists rather than one selector: the button that opens it, which lives in the
+// Menu panel with the rest of the game's own commands, and the frame-rate readout in the
+// corner of the map. Until v0.89.6 both were inside a single #debug box positioned at a
+// hard-coded top: 580px, outside the Panel system, which is how a frame counter came to
+// be a sub-feature of a cheat menu.
+var setSandboxVisible = function(visible) {
+  $('#debugRequest').toggleClass('hidden', !visible);
+  $('#fps').toggleClass('hidden', !visible);
 };
 
 
@@ -112,35 +92,50 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
 
   this.rci = new RCI('RCIContainer', this.simulation);
 
-  // The left-hand stack (town info, the menu-button list, and the RCI demand
-  // graph) and the tools column on the right all used to be static, fixed-position
-  // sidebars -- now every one of them is its own Panel, floating/draggable/
-  // snapping just like the modal windows below. Stacked defaultPositions here
-  // roughly reproduce today's at-a-glance layout for a first-time desktop player;
-  // after that, each panel's own dragged position (or size, for the three
-  // resizable ones) takes over via localStorage, same as the modals.
+  // The left-hand stack and the tools column on the right used to be static,
+  // fixed-position sidebars -- each is its own Panel now, floating/draggable/snapping
+  // just like the modal windows below. The defaultPositions here are the at-a-glance
+  // layout a first-time desktop player gets; after that, each panel's own dragged
+  // position (or size, for the resizable ones) takes over via localStorage.
+  //
+  // The stack was three panels deep until v0.89.6 -- Town Info, Menu, and the demand
+  // graph. Town Info's readouts and the graph are both in the HUD bar now, which is why
+  // there are two Panels below rather than four, and why one of them is usually hidden.
+
+  // The objective panel, which is hidden outside a scenario -- see index.html. Its
+  // default position is still the top of the column, because when it does appear it
+  // belongs above the Menu panel; stackColumn then pushes Menu down to make room.
   this.infoPanel = new Panel('infobar', {left: 50, top: 40});
+  // Top of the column, not 230px down it: Town Info used to sit above this and take up
+  // that space, and since v0.89.6 it is both empty and hidden in a freeform city. A
+  // remembered position (localStorage) still wins over this, so anyone who dragged the
+  // Menu panel somewhere keeps it there.
+  //
   // Resizable for the same reason #controls is: its body scrolls, so a smaller panel
-  // simply shows fewer buttons at a time rather than clipping them. It also gives
-  // shrinkColumnToFit a second panel to take space from on a short window -- before
-  // this, the demand graph was the column's only source of give, and once it hit its
-  // 100px floor the rest of the column just overlapped.
-  this.miscButtonsPanel = new Panel('miscButtons', {left: 50, top: 230}, {
+  // simply shows fewer buttons at a time rather than clipping them, which is what lets
+  // shrinkColumnToFit take space from it on a short window.
+  this.miscButtonsPanel = new Panel('miscButtons', {left: 50, top: 40}, {
     resizable: true, minWidth: 160, minHeight: 90
   });
-  this.rciPanel = new Panel('rciPanel', {left: 50, top: 500}, {
-    resizable: true, minWidth: 126, minHeight: 100, onResize: this.rci.resize.bind(this.rci)
-  });
+  // The demand graph had a Panel of its own here until v0.89.6 -- floating, draggable
+  // and resizable, third in the left-hand column. It lives in the HUD bar now (see the
+  // header in index.html and the rewritten src/rci.js), which is both less to drag
+  // around and, on a phone, the difference between a reading you glance at constantly
+  // and one hidden behind the drawer menu. It redraws on window resize instead of on a
+  // Panel resize handle.
+  this._rciResizeHandler = this.rci.resize.bind(this.rci);
+  window.addEventListener('resize', this._rciResizeHandler);
 
-  // 222 = #controls' own 172px single-column width (style.css) plus the 50px
-  // .rightedge margin it used to sit in, so this lines up with today's spot.
-  var toolsDefaultPosition = {left: Math.max(10, window.innerWidth - 222), top: 40};
+  // 248 = the 198px width #controls has in style.css (widened from 172px in v0.89.6,
+  // when tool rows grew an icon and a cost column) plus the 50px .rightedge margin it
+  // used to sit in, so this still lines up against the right-hand edge.
+  var toolsDefaultPosition = {left: Math.max(10, window.innerWidth - 248), top: 40};
   this.toolsPanel = new Panel('controls', toolsDefaultPosition, {resizable: true, minWidth: 160, minHeight: 150});
 
   // Note: must init canvas before inputStatus
   this.gameCanvas = new GameCanvas('canvasContainer');
   this.gameCanvas.init(this.gameMap, this.tileSet, spriteSheet);
-  renderCustomBuildingButtons();
+  Toolbar.render();
   this.inputStatus = new InputStatus(this.gameMap, this.gameCanvas);
 
   // Every currently-open dialog/window instance (BudgetWindow, EvaluationWindow,
@@ -266,7 +261,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   // ... the settings window
   this.handleSettingsRequest = makeWindowOpenHandler('settings', function() {
     return [{autoBudget: this.simulation.budget.autoBudget, autoBulldoze: BaseTool.getAutoBulldoze(),
-             speed: this.defaultSpeed, disasters: this.simulation.disasterManager.disastersEnabled,
+             disasters: this.simulation.disasterManager.disastersEnabled,
              cheatMenu: this.cheatMenuEnabled}];
   }.bind(this));
   this.settingsWindow = new SettingsWindow(opacityLayerID, 'settingsWindow');
@@ -329,6 +324,14 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   };
   this.infoBar(this.simulation, initialValues);
 
+  // Dim the tools the city cannot currently afford. Off the same FUNDS_CHANGED the
+  // readout above listens to, so the two can never disagree, and seeded with the
+  // starting balance since that message won't fire until the first thing is bought.
+  Toolbar.setFunds(this.simulation.budget.totalFunds);
+  this.simulation.addEventListener(Messages.FUNDS_CHANGED, function(funds) {
+    Toolbar.setFunds(funds);
+  });
+
   this._notificationBar = new Notification('#notifications', this.gameCanvas, Text.messageText[Messages.WELCOME]);
 
   // Track when various milestones are first reached. A city that arrives already at
@@ -351,7 +354,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   // for the coloured label) -- Panel hooks into that same header as a drag handle and
   // takes over from .modal's centring transform once dragged, without changing any of
   // these windows' own open/close/business logic. Below the mobile breakpoint Panel
-  // backs off entirely, same as rciPanel above, so these stay centred and static on
+  // backs off entirely, same as the sidebar panels above, so these stay centred and static on
   // phones. Keyed by DOM id (not by the window's Game property name -- e.g. budget's
   // property is budgetWindow but its element id is just "budget") so
   // _registerOpenWindow/_focusWindow can look one up given the id a window's own
@@ -367,7 +370,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   // map does today: it's the sole window whose content is worth making bigger (a
   // 120x100 city at 3px a tile is legible, at 6px it's comfortable), and the only one
   // that has to redraw to a size change rather than just reflow, hence onResize -- same
-  // arrangement as rciPanel's graph above. Floors match #mapWindow's min-width/
+  // arrangement as the resizable sidebar panels above. Floors match #mapWindow's min-width/
   // min-height in style.css; update both together.
   var modalPanelOptions = {
     mapWindow: {
@@ -412,7 +415,7 @@ function Game(gameMap, tileSet, spriteSheet, difficulty, name) {
   var debug = Config.debug || Config.gameDebug;
   if (debug) {
     this.cheatMenuEnabled = true;
-    $('#debug').toggle();
+    setSandboxVisible(true);
   }
 
   this.commonAnimate = commonAnimate.bind(this);
@@ -557,7 +560,7 @@ Game.prototype.revealControls = function() {
  // out to have, rather than the ones their default offsets assumed, shrinking it to
  // fit the window if it has to. It clamps on its own afterwards.
  Panel.keepAllOnScreen();
- Panel.setColumn([this.infoPanel, this.miscButtonsPanel, this.rciPanel]);
+ Panel.setColumn([this.infoPanel, this.miscButtonsPanel]);
 
  this._notificationBar.news({subject: Messages.WELCOME});
  this.rci.update({residential: 750, commercial: 750, industrial: 750});
@@ -724,11 +727,6 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
         BaseTool.setAutoBulldoze(a.data);
         break;
 
-      case SettingsWindow.SPEED:
-        this.defaultSpeed = a.data;
-        this.simulation.setSpeed(this.defaultSpeed);
-        break;
-
       case SettingsWindow.DISASTERS_CHANGED:
         this.simulation.disasterManager.disastersEnabled = a.data;
         break;
@@ -740,7 +738,7 @@ Game.prototype.handleSettingsWindowClosure = function(actions) {
           this.animStart = new Date();
           this.lastElapsed = -1;
         }
-        $('#debug')[a.data ? 'show' : 'hide']();
+        setSandboxVisible(a.data);
         break;
 
       default:
@@ -993,7 +991,10 @@ Game.prototype.handleTool = function(data) {
       break;
 
     default:
-      $('#toolOutput').html('Tools');
+      // Clears whatever failure the previous click reported, back to naming the tool in
+      // hand. This used to write the literal word "Tools", directly under a panel header
+      // that also said "Tools".
+      this.inputStatus.refreshToolOutput();
   }
 };
 

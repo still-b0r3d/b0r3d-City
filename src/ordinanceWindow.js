@@ -19,7 +19,7 @@ import { ORDINANCES, annualCostOf } from './ordinances.js';
 
 // The list of city policies, one checkbox each. Rendered from the ORDINANCES registry
 // rather than hand-authored in index.html, for the same reason the custom buildings'
-// tool buttons are (see renderCustomBuildingButtons in game.js): adding an ordinance
+// tool buttons are (see src/toolbar.js and src/toolRegistry.js): adding an ordinance
 // should be one entry in one array, not an entry plus a block of markup plus a handler.
 // index.html carries only the shell -- the header, the empty list, and the buttons.
 //

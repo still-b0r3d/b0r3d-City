@@ -14,6 +14,7 @@
 import $ from "jquery";
 
 import * as Messages from './messages.ts';
+import { Panel } from './panel.js';
 
 // Drives one scenario's objective/deadline/scripted-disaster once a Game has
 // been launched with a scenario attached (see scenarios.js and
@@ -38,6 +39,7 @@ var METRIC_LABELS = {
   pollutionAverage: 'Pollution'
 };
 
+var infoPanelID = '#infobar';
 var scenarioPanelID = '#scenarioInfo';
 var scenarioNameID = '#scenarioName';
 var scenarioProgressID = '#scenarioProgress';
@@ -250,8 +252,18 @@ ScenarioController.prototype._objectiveMet = function() {
 
 
 ScenarioController.prototype._showPanel = function() {
+  // Both, since v0.89.6: the panel this lives in used to be "Town Info" and was always
+  // on screen, so showing the objective meant unhiding this block alone. Everything else
+  // that panel held (name, date, funds, score, class, population) is in the HUD bar now,
+  // which left the panel with nothing to show a freeform city -- so it is hidden by
+  // default and a scenario is the only thing that brings it back.
+  $(infoPanelID).show();
   $(scenarioPanelID).show();
   $(scenarioNameID).text(this.scenario.name);
+
+  // The left-hand column lays itself out from the panels that are actually visible, and
+  // one has just appeared above the Menu panel.
+  Panel.stackColumn();
 };
 
 

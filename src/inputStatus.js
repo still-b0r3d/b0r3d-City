@@ -18,6 +18,7 @@ import { GameCanvas } from './gameCanvas.js';
 import { GameTools } from './gameTools.js';
 import * as Messages from './messages.ts';
 import { MiscUtils } from './miscUtils.js';
+import { TOOLS_BY_ID, TOOLS_BY_KEY } from './toolRegistry.js';
 
 // How far (in CSS pixels) a touch may move before it stops counting as a tap and starts
 // counting as a drag/pan
@@ -100,6 +101,12 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this._touchStartY = null;
   this._touchMoved = false;
 
+  // Middle-drag camera pan (see middlePanDownHandler). Shares _panAccumX/_panAccumY
+  // with the touch pan -- the two gestures cannot physically be in progress at once.
+  this._middlePanning = false;
+  this._middlePanLastX = 0;
+  this._middlePanLastY = 0;
+
   // Tool buttons
   this.toolName = null;
   this.currentTool = null;
@@ -114,6 +121,26 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   $(this.canvasID).on('mouseenter', mouseEnterHandler.bind(this));
   $(this.canvasID).on('mouseleave', mouseLeaveHandler.bind(this));
   $(this.canvasID).on('wheel', wheelHandler.bind(this));
+
+  // Middle-drag pans the map. Bound here rather than in mouseEnterHandler -- unlike the
+  // left-button handlers, which come and go with the selected tool, this one has to work
+  // at all times, including (especially) with a draggable tool in hand, since that is
+  // the case where the left button is already spoken for. Until v0.89.6 the mouse could
+  // not pan at all: WASD/the arrows were the only way to move the camera, while touch
+  // has had a proper pan for months. This reuses that same accumulator.
+  //
+  // move/up go on the document, not the canvas, so a drag that leaves the map (over a
+  // panel, or off the window) still tracks and still ends.
+  $(this.canvasID).on('mousedown', middlePanDownHandler.bind(this));
+  $(document).on('mousemove', middlePanMoveHandler.bind(this));
+  $(document).on('mouseup', middlePanUpHandler.bind(this));
+
+  // Chrome/Edge open their scroll-anchor widget on middle mouse *up* unless the auxiliary
+  // click is cancelled as well -- preventDefault on mousedown alone is not enough.
+  $(this.canvasID).on('auxclick', function(e) {
+    if (e.which === 2)
+      e.preventDefault();
+  });
 
   // Bound with the native API (not jQuery) and {passive: false}, since browsers default
   // touch listeners to passive -- without that, preventDefault() here is silently ignored
@@ -204,6 +231,18 @@ var keyDownHandler = function(e) {
   if (isTypingTarget(e.target))
     return;
 
+  // Tool shortcuts. Only the handful reached for constantly carry one (see
+  // toolRegistry.js) -- thirty-four letters nobody can remember would be worse than
+  // none. Modified keystrokes are left alone so browser shortcuts still work.
+  if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+    var toolId = TOOLS_BY_KEY[e.key ? e.key.toLowerCase() : ''];
+    if (toolId) {
+      this.selectTool($('#buttons .toolButton[data-tool="' + toolId + '"]'));
+      e.preventDefault();
+      return;
+    }
+  }
+
   var handled = false;
 
   switch (e.keyCode) {
@@ -285,6 +324,49 @@ var mouseEnterHandler = function(e) {
     $(this.canvasID).on('mousedown', this.mouseDownHandler);
   else
     $(this.canvasID).on('click', this.canvasClickHandler);
+};
+
+
+// The three halves of middle-drag panning. Deliberately separate from the left-button
+// handlers above rather than another branch inside them: those are about a *tool* acting
+// on a tile and are bound and unbound as the tool changes, where this is about the
+// camera and is always live.
+var middlePanDownHandler = function(e) {
+  if (e.which !== 2)
+    return;
+
+  this._middlePanning = true;
+  this._middlePanLastX = e.clientX;
+  this._middlePanLastY = e.clientY;
+  this._panAccumX = 0;
+  this._panAccumY = 0;
+
+  // Stops the browser's own middle-click autoscroll from taking over the drag
+  e.preventDefault();
+};
+
+
+var middlePanMoveHandler = function(e) {
+  if (!this._middlePanning)
+    return;
+
+  this._panAccumX += e.clientX - this._middlePanLastX;
+  this._panAccumY += e.clientY - this._middlePanLastY;
+  this._middlePanLastX = e.clientX;
+  this._middlePanLastY = e.clientY;
+
+  applyPanAccumulator.call(this);
+  e.preventDefault();
+};
+
+
+var middlePanUpHandler = function(e) {
+  if (!this._middlePanning || e.which !== 2)
+    return;
+
+  this._middlePanning = false;
+  this._panAccumX = 0;
+  this._panAccumY = 0;
 };
 
 
@@ -626,6 +708,21 @@ var touchEndHandler = function(e) {
 
 
 var toolButtonHandler = function(e) {
+  // currentTarget, not target: since v0.89.6 a tool button contains an icon, a label,
+  // a cost and sometimes a hotkey hint, so a click lands on one of those children far
+  // more often than on the button itself. target would read data-tool off a <span>
+  // that hasn't got one, and select nothing while looking like it had.
+  this.selectTool($(e.currentTarget));
+  e.preventDefault();
+};
+
+
+// Shared by a click on a tool button and by the keyboard shortcuts below, so a tool
+// picked either way ends up in exactly the same state.
+InputStatus.prototype.selectTool = function(button) {
+  if (button.length === 0)
+    return;
+
   // Remove highlight from last tool button
   $('.selected').each(function() {
     $(this).removeClass('selected');
@@ -633,14 +730,14 @@ var toolButtonHandler = function(e) {
   });
 
   // Add highlight
-  $(e.target).removeClass('unselected');
-  $(e.target).addClass('selected');
+  button.removeClass('unselected');
+  button.addClass('selected');
 
-  this.toolName = $(e.target).attr('data-tool');
-  this.toolWidth = $(e.target).attr('data-size');
+  this.toolName = button.attr('data-tool');
+  this.toolWidth = button.attr('data-size');
   this.currentTool = this.gameTools[this.toolName];
-  this.toolColour = $(e.target).attr('data-colour');
-  $(toolOutputID).html('Tools');
+  this.toolColour = button.attr('data-colour');
+  this.refreshToolOutput();
 
   if (this.toolName !== 'query') {
     $(this.canvasID).removeClass('helpPointer');
@@ -654,8 +751,27 @@ var toolButtonHandler = function(e) {
   // the map underneath is immediately tappable, rather than making the player dismiss it
   // manually first. A no-op on desktop, where this class is never set.
   $('body').removeClass('showToolsDrawer');
+};
 
-  e.preventDefault();
+
+// The line under the Tools panel header. It exists to say why a click did nothing
+// ("needs bulldozing", "no money", an ordinance forbidding it -- see game.js), and used
+// to read the literal word "Tools" the rest of the time, directly beneath a panel header
+// already reading "Tools". It names the tool in hand instead, which is the one thing a
+// player might genuinely have lost track of. Game calls this to clear a stale message.
+InputStatus.prototype.refreshToolOutput = function() {
+  if (!this.toolName) {
+    $(toolOutputID).text('No tool selected');
+    return;
+  }
+
+  var tool = TOOLS_BY_ID[this.toolName];
+  if (!tool) {
+    $(toolOutputID).text(this.toolName);
+    return;
+  }
+
+  $(toolOutputID).text(tool.cost > 0 ? tool.label + ' · $' + tool.cost : tool.label);
 };
 
 
@@ -666,9 +782,11 @@ InputStatus.prototype.clearTool = function() {
   }
 
   this.currentTool = null;
+  this.toolName = null;
   this.toolWidth = 0;
   this.toolColour = '';
   $('.selected').removeClass('selected');
+  this.refreshToolOutput();
 };
 
 

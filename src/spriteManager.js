@@ -283,28 +283,51 @@ SpriteManager.prototype.makeZombieAt = function(x, y) {
 };
 
 
+// How far out of town a horde appears, in tiles from the city centre. They still arrive
+// from outside and converge inwards -- that part of the original idea was right -- but
+// they used to spawn on the edge of the *map*, and that was a bug rather than a
+// difficulty setting.
+//
+// The arithmetic, since it is the whole reason the zombies read as doing nothing before
+// v0.89.6: a zombie moves one world pixel per animation frame, i.e. a sixteenth of a
+// tile, and ZOMBIE_LIFETIME is 900 frames. Its entire life therefore covers 56 tiles,
+// best case. On a 120x100 map the distance from an edge to the centre is 50-60, so a
+// spawn on the left or right edge could not reach town at all, and one on the top or
+// bottom arrived with a second or two left -- at which point police coverage, which
+// only exists over the built-up part of the map, burned through what was left.
+//
+// Worse, it meant the dread they laid down on the way in landed on undeveloped tiles,
+// and pollutionTerrainLandValueScan does not give undeveloped tiles a land value to
+// lose. Nearly the whole effect was being written into blocks where it could not be
+// read. Spawning them here instead puts their entire lifetime over ground that has a
+// value: 18-28 tiles is comfortably outside a young city, still visibly "from
+// somewhere else", and about a third of the travel budget.
+var HORDE_SPAWN_MIN_RADIUS = 18;
+var HORDE_SPAWN_MAX_RADIUS = 28;
+
+
 // A wave, not a single zombie -- one shambler is a curiosity, and the threat is that
-// there are a lot of them. They come in off the edges of the map rather than rising out
-// of the city (the monster's spawn rule is the opposite: it comes up out of the river),
-// so a player watching the map sees the horde arrive from outside and converge on the
-// centre of town.
+// there are a lot of them. Scattered around a ring rather than clumped, so a player
+// watching the map sees a crowd closing in from every side rather than a single file.
 //
 // Only the first one is announced. Emitting ZOMBIE_SIGHTED per zombie would fire the
 // notification bar and MonsterTV a dozen times in one frame, each replacing the last.
 SpriteManager.prototype.makeZombies = function(count) {
   count = count || DEFAULT_HORDE_SIZE;
 
-  for (var i = 0; i < count; i++) {
-    var x, y;
+  var centreX = this.map.cityCentreX;
+  var centreY = this.map.cityCentreY;
 
-    // Pick an edge, then a position along it.
-    if (Random.getRandom(1) === 0) {
-      x = Random.getRandom(1) === 0 ? 0 : this.map.width - 1;
-      y = Random.getRandom(this.map.height - 1);
-    } else {
-      x = Random.getRandom(this.map.width - 1);
-      y = Random.getRandom(1) === 0 ? 0 : this.map.height - 1;
-    }
+  for (var i = 0; i < count; i++) {
+    var angle = (Random.getRandom(359) * Math.PI) / 180;
+    var radius = HORDE_SPAWN_MIN_RADIUS +
+                 Random.getRandom(HORDE_SPAWN_MAX_RADIUS - HORDE_SPAWN_MIN_RADIUS);
+
+    // Clamped rather than retried: on a city near a corner of the map some of the ring
+    // is off the edge of the world, and a zombie pinned to the boundary there is still
+    // in roughly the right direction and still walks inward.
+    var x = MiscUtils.clamp(Math.round(centreX + Math.cos(angle) * radius), 0, this.map.width - 1);
+    var y = MiscUtils.clamp(Math.round(centreY + Math.sin(angle) * radius), 0, this.map.height - 1);
 
     if (i === 0) {
       this.makeZombieAt(x, y);

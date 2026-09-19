@@ -16,7 +16,6 @@ import $ from "jquery";
 import { SETTINGS_WINDOW_CLOSED } from './messages.ts';
 import { ModalWindow } from './modalWindow.js';
 import { MiscUtils } from './miscUtils.js';
-import { Simulation } from './simulation.js';
 
 var SettingsWindow = ModalWindow(function() {
   $(settingsCancelID).on('click', cancel.bind(this));
@@ -31,9 +30,6 @@ var autoBudgetYesID = '#autoBudgetYes';
 var autoBudgetNoID = '#autoBudgetNo';
 var autoBulldozeYesID = '#autoBulldozeYes';
 var autoBulldozeNoID = '#autoBulldozeNo';
-var speedSlowID = '#speedSlow';
-var speedMedID = '#speedMed';
-var speedFastID = '#speedFast';
 var disastersYesID = '#disastersYes';
 var disastersNoID = '#disastersNo';
 var cheatMenuYesID = '#cheatMenuYes';
@@ -72,9 +68,6 @@ var submit = function(e) {
     shouldAutoBulldoze = false;
   actions.push({action: SettingsWindow.AUTOBULLDOZE, data: shouldAutoBulldoze});
 
-  var speed = $('.speedSetting:checked').val() - 0;
-  actions.push({action: SettingsWindow.SPEED, data: speed});
-
   var shouldEnableDisasters = $('.enableDisastersSetting:checked').val();
   if (shouldEnableDisasters === 'true')
     shouldEnableDisasters = true;
@@ -104,13 +97,6 @@ SettingsWindow.prototype.open = function(settingsData) {
   else
     $(autoBulldozeNoID).prop('checked', true);
 
-  if (settingsData.speed === Simulation.SPEED_SLOW)
-    $(speedSlowID).prop('checked', true);
-  else if (settingsData.speed === Simulation.SPEED_MED)
-    $(speedMedID).prop('checked', true);
-  else
-    $(speedFastID).prop('checked', true);
-
   if (settingsData.disasters)
     $(disastersYesID).prop('checked', true);
   else
@@ -137,7 +123,6 @@ var defineAction = (function() {
 
 defineAction('AUTOBUDGET');
 defineAction('AUTOBULLDOZE');
-defineAction('SPEED');
 defineAction('DISASTERS_CHANGED');
 defineAction('CHEAT_MENU_CHANGED');
 

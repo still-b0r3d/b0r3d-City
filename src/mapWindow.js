@@ -321,6 +321,17 @@ var OVERLAYS = [
     low: 'None', high: 'Strong',
     description: 'The land-value bonus from Hospitals, Libraries, Museums and Large Parks.'
   },
+  // The one overlay backed by a map nothing scans: zombieMap is written by the sprites
+  // themselves and decays in _clearCensus (see simulation.js). Added in v0.89.6 because
+  // a zombie's entire effect on the city is this number, and until now there was no way
+  // to look at it -- the wave's cost showed up only indirectly, a while later, in land
+  // value and crime. Empty and invisible in a city that has never seen one.
+  {
+    id: 'dread', label: 'Dread',
+    blockMap: 'zombieMap', max: 1000, ramp: RAMP_HAZARD,
+    low: 'Calm', high: 'Overrun',
+    description: 'Where the horde has been. Sinks land value while it lasts, and fades once they are gone.'
+  },
   {
     id: 'power', label: 'Power Grid',
     ramp: null,

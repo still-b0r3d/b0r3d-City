@@ -25,9 +25,44 @@
   <body>
     <img id="tiles" class="imageData" src="images/tiles.png?<%= htmlWebpackPlugin.options.gitHash %>" alt="These are the game's principal tiles">
     <img id="sprites" class="imageData" src="images/sprites.png?<%= htmlWebpackPlugin.options.gitHash %>" alt="These are the game's sprites">
-    <header id="header" class="chunk border-bottom padding10">
-      <div class="left inlineblock">
-        <h1 id="title" class="white fontlarge">b0r3d-city</h1>
+    <!-- The HUD bar (v0.89.6). This was the fork's banner until now: 35px of
+         darkslategray, a 45-degree stripe and the word "b0r3d-city", above a layout
+         whose own source (panel.js's shrinkColumnToFit, the SHORT_BREAKPOINT work)
+         has several paragraphs about running out of vertical room. It now carries the
+         readouts a player checks constantly -- funds, the date, population, city
+         class and score, demand, and the speed control -- which is what let the Town
+         Info and Demand panels come out of the left column entirely.
+
+         The #funds/#date/#population/#score/#cclass/#name spans keep their ids
+         because src/infoBar.js writes to them by id; it needed no changes.
+
+         On a phone this wraps to a second row rather than getting a layout of its own
+         (see the max-width block in style.css). That is a straight win there: the
+         demand graph used to live inside the left drawer, so the one reading you
+         glance at every few seconds was behind a hamburger menu. -->
+    <header id="header" class="border-bottom">
+      <div id="hudBrand">
+        <h1 id="title" class="chunk white">b0r3d-city</h1>
+      </div>
+      <div id="hudStats" class="initialHidden">
+        <div class="hudStat hudCity"><span id="name">&mdash;</span></div>
+        <div class="hudStat"><span class="hudLabel">funds</span><span class="hudValue">$<span id="funds">20000</span></span></div>
+        <div class="hudStat"><span class="hudLabel">date</span><span class="hudValue" id="date">Jan 1900</span></div>
+        <div class="hudStat"><span class="hudLabel">pop</span><span class="hudValue" id="population">0</span></div>
+        <div class="hudStat"><span class="hudLabel" id="cclass">VILLAGE</span><span class="hudValue" id="score">0</span></div>
+      </div>
+      <div id="hudDemand" class="initialHidden" title="Demand for residential, commercial and industrial zones">
+        <div id="RCIContainer"></div>
+      </div>
+      <!-- Moved here from the Menu panel, where a speed control was an odd thing to
+           have to scroll a list of windows to reach. Four buttons rather than the
+           three-way radio Settings used to duplicate (which could not pause at all --
+           see handleSettingsWindowClosure). -->
+      <div id="hudSpeed" class="initialHidden" role="group" aria-label="Simulation speed">
+        <button id="speedPauseBtn" class="speedButton" type="button" title="Pause">&#10074;&#10074;</button>
+        <button id="speedSlowBtn" class="speedButton" type="button" title="Slow">1&times;</button>
+        <button id="speedMedBtn" class="speedButton" type="button" title="Medium">2&times;</button>
+        <button id="speedFastBtn" class="speedButton" type="button" title="Fast">3&times;</button>
       </div>
       <div id="mobileDrawerToggles" class="initialHidden">
         <button id="infoDrawerToggle" class="mobileDrawerToggle" type="button">&#9776; Menu</button>
@@ -97,32 +132,17 @@
           <button id="fullScenarioBack" class="width140 block margin10 splashButton cancel">Back</button>
         </div>
         <div id="leftStack" class="leftedge">
-          <div id="infobar" class="alignCenter open controlShadow mintcream z1 initialHidden">
-            <header class="panelHeader alignCenter">Town Info</header>
+          <!-- Was "Town Info", and held the name, date, funds, score, class and
+               population that are now in the HUD bar at the top of the page. What is
+               left is the scenario objective, which is why this panel is `hidden`
+               rather than `initialHidden`: revealControls() unhides everything with
+               the latter, and a freeform city has nothing to put in here at all.
+               ScenarioController.start() shows it (and #scenarioInfo inside it) when
+               there is an objective to show. Panel.stackColumn filters on :visible, so
+               the Menu panel simply takes the top of the column the rest of the time. -->
+          <div id="infobar" class="alignCenter open controlShadow mintcream z1 hidden">
+            <header class="panelHeader alignCenter">Objective</header>
             <div class="inner padding10">
-              <div class="semibold chunk">
-                <span id="name">Your Name Here</span>
-              </div>
-              <div>
-                <span id="date">Jan 1900</span>
-              </div>
-              <div class="elided">
-                Funds $<span id="funds">20000</span>
-              </div>
-              <div class="elided">
-                Score: <span id="score">0</span>
-              </div>
-              <div>
-                <span id="cclass">VILLAGE</span>
-              </div>
-              <div class="elided">
-                Population:<br /> <span id="population">0</span>
-              </div>
-              <!-- Scenario mode only: shown (and kept up to date) by
-                   scenarioController.js, which unhides this whole block. Lives inside
-                   Town Info rather than in a window of its own so the objective sits
-                   next to the date and population it's measured against, and so it
-                   comes along for free in the mobile drawer. -->
               <div id="scenarioInfo" class="hidden">
                 <div id="scenarioName" class="semibold"></div>
                 <div id="scenarioProgress"></div>
@@ -139,7 +159,16 @@
                of the panel. #controls solved the same sum by being 172px wide. -->
           <div id="miscButtons" class="alignCenter open controlShadow mintcream z1 initialHidden">
             <header class="panelHeader alignCenter">Menu</header>
+            <!-- Grouped in v0.89.6, for the same reason the Tools panel was: this was
+                 eleven flat buttons with a speed control and two zoom buttons loose in
+                 the middle of them. Speed is now in the HUD bar and zoom is on the map
+                 itself, both of which are controls rather than menu items; what is left
+                 divides cleanly into running the city, looking at it, and the game
+                 around it. Headers here are plain labels, not the collapsible ones the
+                 Tools panel has -- eleven items in three groups all fit at once, so
+                 there is nothing to collapse. -->
             <div id="menuButtons">
+              <div class="menuGroupHeader">City</div>
               <button id="budgetRequest" class="miscButton">Budget</button>
               <!-- The two windows that spend money without placing a tile: city
                    policy, and the power market next door. Both sit directly under
@@ -147,65 +176,42 @@
               <button id="ordinanceRequest" class="miscButton">Ordinances</button>
               <button id="neighbourRequest" class="miscButton">Neighbours</button>
               <button id="evalRequest" class="miscButton">Evaluation</button>
+
+              <div class="menuGroupHeader">Views</div>
               <button id="mapRequest" class="miscButton">City Maps</button>
               <button id="graphRequest" class="miscButton">Graphs</button>
               <button id="disasterRequest" class="miscButton">Disasters</button>
+              <button id="screenshotRequest" class="miscButton">Take Picture</button>
+
+              <div class="menuGroupHeader">Game</div>
               <button id="saveRequest" class="miscButton loadSave" disabled>Save</button>
               <button id="highScoreRequest" class="miscButton">High Scores</button>
               <button id="settingsRequest" class="miscButton">Settings</button>
-              <button id="screenshotRequest" class="miscButton">Take Picture</button>
-              <!-- A segmented speed control, replacing the old single Pause toggle. The
-                   simulation has always supported four speeds (see Simulation's
-                   SPEED_PAUSED/SLOW/MED/FAST and the threshold switch in _simFrame),
-                   and the Settings window has always exposed them, but the in-game
-                   button only ever offered stop and go. Four small buttons on one row
-                   rather than four full-width miscButtons, since the Menu panel's
-                   height is contended -- see Panel.setColumn's shrinkColumnToFit. -->
-              <div id="speedControls" role="group" aria-label="Simulation speed">
-                <button id="speedPauseBtn" class="speedButton" title="Pause">Pause</button>
-                <button id="speedSlowBtn" class="speedButton" title="Slow">Slow</button>
-                <button id="speedMedBtn" class="speedButton" title="Medium">Med</button>
-                <button id="speedFastBtn" class="speedButton" title="Fast">Fast</button>
-              </div>
-              <button id="zoomInRequest" class="miscButton">Zoom In</button>
-              <button id="zoomOutRequest" class="miscButton">Zoom Out</button>
+              <!-- The sandbox, off by default and switched on in Settings. It used to
+                   be a button called "Cheats" inside #debug -- a box hard-positioned at
+                   top: 580px, outside the Panel system entirely, that also held the FPS
+                   counter. See the note on #debug further down. -->
+              <button id="debugRequest" class="miscButton hidden">Sandbox</button>
               <!-- Last in the list, and ruled off above, because it is the one button
                    here that throws the city away. Before this existed the only way back
                    to the splash screen was reloading the page by hand. -->
               <button id="mainMenuRequest" class="miscButton quitButton">Main Menu</button>
             </div>
           </div>
-          <div id="rciPanel" class="controlShadow mintcream z1 initialHidden">
-            <header class="panelHeader alignCenter">Demand</header>
-            <div id="RCIContainer"></div>
-          </div>
         </div>
         <div id="controls" class="controlShadow mintcream z1 initialHidden rightedge open">
           <header class="panelHeader alignCenter">Tools</header>
-          <div id="toolInfo" class="alignCenter"><span id="toolOutput">Tools</span></div>
-          <div id="buttons">
-            <button id="residentialButton" data-size="3" data-tool="residential" data-colour="lime" class="toolButton unselected">Residential $100</button>
-            <button id="nuclearButton" data-size="4" data-tool="nuclear" data-colour="mistyrose" class="toolButton unselected">Nuclear $5000</button>
-            <button id="commercialButton" data-size="3" data-tool="commercial" data-colour="blue" class="toolButton unselected">Commercial $100</button>
-            <button id="coalButton" data-size="4" data-tool="coal" data-colour="gray" class="toolButton unselected">Coal $3000</button>
-            <button id="industrialButton" data-size="3" data-tool="industrial" data-colour="yellow" class="toolButton unselected">Industrial $100</button>
-            <button id="policeButton" data-size="3" data-tool="police" data-colour="darkblue" class="toolButton unselected">Police $500</button>
-            <button id="roadButton" data-size="1" data-tool="road" data-colour="black" class="toolButton unselected">Road $10</button>
-            <button id="fireButton" data-size="3" data-tool="fire" data-colour="red" class="toolButton unselected">Fire $500</button>
-            <button id="railButton" data-size="1" data-tool="rail" data-colour="brown" class="toolButton unselected">Rail $20</button>
-            <button id="portButton" data-size="4" data-tool="port" data-colour="dodgerblue" class="toolButton unselected">Port $3000</button>
-            <button id="wireButton" data-size="1" data-tool="wire" data-colour="khaki" class="toolButton unselected">Wire $5</button>
-            <button id="stadiumButton" data-size="4" data-tool="stadium" data-colour="indigo" class="toolButton unselected">Stadium $5000</button>
-            <button id="bulldozerButton" data-size="1" data-tool="bulldozer" data-colour="salmon" class="toolButton unselected">Bulldozer $1</button>
-            <button id="airportButton" data-size="6" data-tool="airport" data-colour="violet" class="toolButton unselected">Airport $10000</button>
-            <button id="queryButton" data-size="1" data-tool="query" data-colour="cyan" class="toolButton unselected">Query</button>
-            <!-- b0r3d-city's custom buildings (Hospital/School/Casino/Library, and any
-                 future ones) aren't hand-authored here -- game.js renders one button per
-                 src/customBuildings.js entry into this list before input is wired up. -->
-            <button id="parkButton" data-size="1" data-tool="park" data-colour="darkgreen" class="toolButton unselected">Park $10</button>
-          </div>
+          <div id="toolInfo" class="alignCenter"><span id="toolOutput">No tool selected</span></div>
+          <!-- Empty on purpose. Every tool button -- the sixteen the engine ships with
+               as well as b0r3d-city's own buildings -- is rendered into here from
+               src/toolRegistry.js by src/toolbar.js, in groups. Before v0.89.6 the
+               sixteen were hand-authored in this file and the custom ones appended
+               after them, which is exactly why the panel was one flat list of 34 in
+               the order things had been added. Adding a building is a
+               customBuildings.js entry plus a line in toolRegistry's CUSTOM_GROUPS. -->
+          <div id="buttons"></div>
         </div>
-        <div id="monstertv" class="alignCenter z1 hidden rightedge padding10 controlShadow open">
+        <div id="monstertv" class="alignCenter z1 hidden padding10 controlShadow open">
           <div id="monsterTVContainer">
             <div id="tvContainer">
             </div>
@@ -214,26 +220,34 @@
             </form>
           </div>
         </div>
-        <div id="debug" class="alignCenter z1 rightedge padding10 mintcream controlShadow open">
-          <div id="fps">
-            <span id="fpsValue">0</span> FPS
-          </div>
-          <div>
-            <button id="debugRequest">Cheats</button>
-          </div>
+        <!-- Zoom, on the map rather than in a menu. These were two rows in the Menu
+             panel's button list, which meant scrolling a list of windows to change the
+             view -- they are controls, not menu items, and the scroll wheel has always
+             done the same job. Bottom-left so they stay clear of the Tools panel on the
+             right and the notification bar along the bottom centre. -->
+        <div id="mapControls" class="initialHidden">
+          <button id="zoomInRequest" type="button" title="Zoom in">+</button>
+          <button id="zoomOutRequest" type="button" title="Zoom out">&minus;</button>
         </div>
+        <!-- The frame-rate readout. Until v0.89.6 this box also held the button that
+             opened the cheat menu, which has nothing to do with frame rate, and the
+             whole thing was positioned at a hard-coded top: 580px outside the Panel
+             system. The button moved to the Menu panel (as "Sandbox"); what's left is
+             a small readout pinned to the corner, still shown only when the sandbox is
+             switched on in Settings. The dev menu has its own performance section. -->
+        <div id="fps" class="hidden"><span id="fpsValue">0</span> FPS</div>
         <div id="notifications" class="initialHidden neutral z1 rightedge alignCenter elided padding10 controlShadow"></div>
-        <div id="tooSmall" data-hasscript="false" class="mintcream open"><div id="tooSmallInner" class="alignCenter padding10"><h2 class="chunk">Uh-oh!</h2><p>This screen is too small&mdash;I won't be able to fit in all the controls, buttons and gizmos! Sorry!</p></div></div>
+        <div id="tooSmall" data-hasscript="false" class="mintcream open"><div id="tooSmallInner" class="alignCenter padding10"><h2 class="chunk">Not enough room</h2><p>This window is too small to fit the map, the tools and the readouts at once. Try turning your phone sideways, or making the window bigger.</p></div></div>
         <noscript>
           <div id="noscript" class="open mintcream centred padding10">
-            <h1 class="chunk alignCenter">micropolisJS</h1>
-            <p class="padding10">Hey, thanks for your interest in micropolisJS!</p>
-            <p class="padding10">Unfortunately, the <abbr title="Javascript">JS</abbr> stands for "<em>Javascript</em>", which appears to be disabled on your system. Consult your browser's documentation on how to enable Javascript!</p>
+            <h1 class="chunk alignCenter">b0r3d-city</h1>
+            <p class="padding10">Thanks for stopping by!</p>
+            <p class="padding10">b0r3d-city is a city simulator written in Javascript, which appears to be turned off in this browser. Switch it on and reload, and the city will be here.</p>
           </div>
         </noscript>
       </main>
       <footer id="footer" class="alignCenter chunk white padding10">
-        <div id="build">v0.89.5 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+        <div id="build">v0.89.6 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
         <div id="footerLinks">
           <a href="about.html" target="_blank">About</a> &middot;
           <a href="https://github.com/still-b0r3d/b0r3d-City" target="_blank">GitHub</a> &middot;
@@ -580,19 +594,18 @@
                 <input type="radio" class="autoBulldozeSetting" name="autoBulldozeSetting" id="autoBulldozeYes" value="true" checked="checked"><label for="autoBulldozeYes">Yes</label>
                 <input type="radio" class="autoBulldozeSetting" name="autoBulldozeSetting" id="autoBulldozeNo" value="false"><label for="autoBulldozeNo">No</label>
               </div>
-              <div id="speedSelect" class="padding10">
-                Speed:
-                <input type="radio" class="speedSetting" name="speedSetting" id="speedSlow" value="1" checked="checked"><label for="speedSlow">Slow</label>
-                <input type="radio" class="speedSetting" name="speedSetting" id="speedMed" value="2"><label for="speedMed">Medium</label>
-                <input type="radio" class="speedSetting" name="speedSetting" id="speedFast" value="3"><label for="speedFast">Fast</label>
-              </div>
               <div id="disastersSelect" class="padding10">
                 Auto-disasters:
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersYes" value="true" checked="checked"><label for="disastersYes">Yes</label>
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersNo" value="false"><label for="disastersNo">No</label>
               </div>
+              <!-- "Sandbox" since v0.89.6, not "cheat menu": the dev menu (?dev=1) covers
+                   everything this does and more, so what is left of it is a toy for players
+                   rather than a tool. The ids stay cheatMenu* -- cheatsUsed, the one-way flag
+                   that keeps a city off the leaderboard, is named for the same thing and
+                   renaming it would reach into the save format. -->
               <div id="cheatMenuSelect" class="padding10">
-                Cheat menu:
+                Sandbox:
                 <input type="radio" class="cheatMenuSetting" name="cheatMenuSetting" id="cheatMenuYes" value="true"><label for="cheatMenuYes">Yes</label>
                 <input type="radio" class="cheatMenuSetting" name="cheatMenuSetting" id="cheatMenuNo" value="false" checked="checked"><label for="cheatMenuNo">No</label>
               </div>
@@ -604,7 +617,7 @@
       </div>
       <div class="hidden modal shadow" id="debugWindow">
         <header id="debugHeader" class="debugHeader white padding10 chunk alignCenter">
-           Cheat Menu
+           Sandbox
         </header>
         <div id="debugContainer" class="padding10 open">
           <form id="debugForm" class="alignCenter margin10">

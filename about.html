@@ -39,6 +39,23 @@
         <p>
           b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, a handmade port of <a href="http://code.google.com/p/micropolis/">Micropolis</a> to Javascript. (Micropolis is the open-source release of a commercial game once sold by Electronic Arts). The aim is to grow your city, balancing the various competing demands. Use the buttons in the toolbox to select the various zones and buildings, and then click on the desired location to build.
         </p>
+        <h3 class="alignCenter chunk">Version 0.89.6 &mdash; the UI pass</h3>
+        <p>
+          One release, spent entirely on how the game looks and reads rather than on what it simulates.
+        </p>
+        <ul>
+          <li><strong>The build menu has groups.</strong> Thirty-four tools in one colour-coded column, in the order they happened to get added over the last fortnight, is not a menu&mdash;it's a list. They're sorted into Zones, Transport, Power, Industry, Services, Leisure and Landmarks now, each one collapsible and each remembering whether you left it open. Query and Bulldoze sit above the lot, outside the groups, because you reach for those between placing things rather than instead of.</li>
+          <li><strong>Every tool shows its own building.</strong> The art was always there&mdash;each button now carries the actual tile the thing is made of, instead of a block of colour that meant nothing. The colour is still there as a stripe down the left edge, where it matches the outline you get when you go to place it.</li>
+          <li><strong>Hover a building to find out what it does.</strong> There are thirty-four of these now and the only difference between half of them is a number the game never told you. Land value, which demand it feeds and how hard, footprint and price, all on hover. And what you can't currently afford is greyed out.</li>
+          <li><strong>Keyboard shortcuts:</strong> <kbd>1</kbd>&ndash;<kbd>3</kbd> for the three zones, <kbd>4</kbd>&ndash;<kbd>6</kbd> for road, rail and wire, <kbd>7</kbd> for park, <kbd>Q</kbd> to query and <kbd>X</kbd> to bulldoze. Only the tools you reach for constantly have one; thirty-four letters nobody can remember would be worse than none.</li>
+          <li><strong>Middle-click and drag to move around the map.</strong> The mouse couldn't pan at all before this&mdash;it was the arrow keys or nothing, while touch has had a proper drag for months. It works with a tool in hand, which is the whole point of using a button the tools don't want.</li>
+          <li><strong>A HUD bar, in place of the old banner.</strong> The strip along the top was a leftover from the project this is built on: a stripe, a title and nothing else. It carries your funds, the date, population, city class and score, the demand graph and the speed control now. Which means Town Info and the Demand panel are gone from the left-hand column entirely&mdash;there's more room for the map, and on a phone the demand reading is finally on screen instead of hidden behind the menu drawer.</li>
+          <li><strong>The demand graph is redrawn.</strong> It was built out of whole rectangles on a fixed grid, which is why it looked chunky and snapped between sizes. Three bars, a zero line, and the colours of the zones they stand for.</li>
+          <li><strong>Zoom moved onto the map</strong>, bottom-left, instead of being two rows in a list of windows. The Menu panel is sorted into City, Views and Game while we were in there.</li>
+          <li><strong>Zombies actually do something now.</strong> They were spawning at the edge of the <em>map</em>, and a zombie only has about fifty-six tiles of walking in it&mdash;so most of a horde died in open country before it ever reached town, and the dread it laid down on the way landed on empty ground, which has no land value to lose. They arrive at the edge of the city instead. Police coverage still clears them faster than anything else, but it no longer wipes them out on arrival before they've cost you a thing. And City Maps has a <strong>Dread</strong> overlay, so you can see where they've been.</li>
+          <li><strong>One speed control, not two.</strong> Settings had its own copy that couldn't pause and never agreed with the buttons in the panel. It's gone; the real one is in the HUD bar.</li>
+          <li><strong>The cheat menu is the Sandbox</strong>, and its button lives in the Menu panel with everything else rather than in a floating box that also contained the frame counter for no reason anyone could explain.</li>
+        </ul>
         <h3 class="alignCenter chunk">Version 0.89.5</h3>
         <p>
           Everything that shipped between v0.89 and v0.89.5. Newest first.
@@ -131,11 +148,14 @@
           The evaluation tool can provide insight into the opinion of the city's inhabitants, and the query tool offers finer-grained insight.
         </p>
         <p>
-          Proud of what you've built (or how spectacularly it's burning)? Hit High Scores to submit your city to a leaderboard shared with the rest of b0r3d.org's games. Three letters is all the fame you get, but it's yours. (Used the cheat menu on this city? No judgement, but it won't be eligible for the leaderboard.)
+          Proud of what you've built (or how spectacularly it's burning)? Hit High Scores to submit your city to a leaderboard shared with the rest of b0r3d.org's games. Three letters is all the fame you get, but it's yours. (Used the Sandbox on this city? No judgement, but it won't be eligible for the leaderboard.)
         </p>
         <h3 class="alignCenter chunk">Getting Around</h3>
         <p>
-          The map is bigger than your screen, so you'll need to move it. On desktop, the arrow keys (or W/A/S/D) pan the camera, and the mouse wheel (or the Zoom In/Zoom Out buttons) takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around. Time has its own controls in the Menu panel: Pause, Slow, Medium and Fast. Slow gives you room to react while a city is small or a disaster is unfolding; Fast is for watching a decade go by.
+          The map is bigger than your screen, so you'll need to move it. On desktop, hold the middle mouse button and drag&mdash;that works with a tool in hand, so you don't have to put anything down to look around&mdash;or use the arrow keys (or W/A/S/D). The mouse wheel, or the + and &minus; buttons in the corner of the map, takes you anywhere from a full-map overview down to a close-up. On a touchscreen, drag with one finger to pan, and tap to place whatever tool's selected&mdash;drag instead with Road, Rail, or Wire selected to paint a line of them rather than tapping one tile at a time. A second finger always pans, even mid-drag with a tool selected, if you just need to look around. Time has its own controls at the right-hand end of the bar along the top: pause, then slow, medium and fast. Slow gives you room to react while a city is small or a disaster is unfolding; fast is for watching a decade go by.
+        </p>
+        <p>
+          The tools are grouped&mdash;Zones, Transport, Power, Industry, Services, Leisure, Landmarks&mdash;and each group folds away if you'd rather not look at it. Hover any building to see what it actually does to the city around it, and what it costs. The ones you'll want most often have a key: <kbd>1</kbd>, <kbd>2</kbd> and <kbd>3</kbd> for residential, commercial and industrial, <kbd>4</kbd>, <kbd>5</kbd> and <kbd>6</kbd> for road, rail and wire, <kbd>7</kbd> for park, <kbd>Q</kbd> to query a tile and <kbd>X</kbd> to bulldoze.
         </p>
         <h3 class="alignCenter chunk">Graphs</h3>
         <p>
@@ -174,7 +194,7 @@
         </p>
         <h3 class="alignCenter chunk">Windows</h3>
         <p>
-          Every panel&mdash;Town Info, the Menu button list, your Tools, Budget, Evaluation, Settings, all of it, even the little Demand graph up top&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Menu, Demand graph, Tools, City Maps and Graphs windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
+          Every panel&mdash;the Menu button list, your Tools, Budget, Evaluation, Settings, all of it&mdash;is a real window. Drag one by its title bar to put it wherever you like, and open as many at once as you want. Drag one close to another and it'll click into alignment along the shared edge, handy for lining a few up into a makeshift dashboard. The Menu, Tools, City Maps and Graphs windows can also be resized from their bottom-right corner. Wherever you leave a window&mdash;position, size&mdash;it stays put next time you play. Budget's the exception: it's still a proper pause-everything dialog, since its numbers are a snapshot you're meant to act on before time moves again. Everything else keeps the city running while it's open.
         </p>
         <h3 class="alignCenter chunk">Saving Your City</h3>
         <p>
@@ -211,7 +231,7 @@
       </div>
     </main>
     <footer id="aboutFooter" class="alignCenter chunk white padding10">
-      <div id="build">v0.89.5 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+      <div id="build">v0.89.6 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
       <div class="nameLicense">
         Based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, itself a port of the open-source <cite>Micropolis</cite>.
       </div>

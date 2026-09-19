@@ -73,6 +73,19 @@ window.addEventListener('resize', syncHeaderHeight);
 if (document.fonts && document.fonts.ready)
   document.fonts.ready.then(syncHeaderHeight);
 
+// A ResizeObserver as well as the two triggers above, because since v0.89.6 the header
+// is a HUD bar whose height changes for reasons neither of them sees. The case that
+// actually broke: its readouts are .initialHidden until a city starts, so on a phone the
+// bar is one row on the splash screen and two rows once the game reveals them -- no
+// resize event, no font load, and #wrapper went on starting at the one-row height with
+// the second row hidden underneath the map. An observer catches that, and every other
+// reflow (a drawer opening, a long city name, rotating the phone) for free.
+if (window.ResizeObserver) {
+  var header = document.getElementById('header');
+  if (header)
+    new ResizeObserver(syncHeaderHeight).observe(header);
+}
+
 
 // Check for debug parameter in URL
 Config.debug = window.location.search.slice(1).split('&').some(function(param) {

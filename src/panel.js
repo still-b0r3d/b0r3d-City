@@ -71,8 +71,8 @@ var SNAP_THRESHOLD = 15;
 
 
 // id: DOM id of the panel's outer element, which must contain a child <header> to
-// serve as the drag handle -- every rciPanel/.modal window already has one (used
-// today for a title bar), so this needs no markup changes to attach to them.
+// serve as the drag handle -- every sidebar panel and .modal window already has one
+// (used today for a title bar), so this needs no markup changes to attach to them.
 // defaultPosition: optional {left, top} used the first time this panel is ever
 // shown, before the player has dragged it anywhere -- if omitted, defaults to
 // top-centre, which is the one spot guaranteed clear of both the #leftStack column
@@ -85,10 +85,11 @@ var SNAP_THRESHOLD = 15;
 // drag handle in the bottom-right corner (large viewports only, same as dragging); the
 // panel's content is expected to be laid out so it can actually grow/shrink into
 // whatever size is picked (flex/overflow, not a fixed intrinsic size) -- see
-// rciPanel and #controls for the two panels that use this today. onResize fires
-// on every mousemove while resizing, so content that needs to redraw itself to
-// the new size (the RCI graph) can do so immediately rather than waiting for its
-// own next unrelated update.
+// #controls and #miscButtons, the two panels that use this today. onResize fires
+// on every mousemove while resizing, so content that needs to redraw itself to the
+// new size can do so immediately rather than waiting for its own next update. (The
+// demand graph was the original reason this existed; it moved to the HUD bar in
+// v0.89.6 and now redraws on window resize instead.)
 var Panel = function(id, defaultPosition, opts) {
   this._selector = MiscUtils.normaliseDOMid(id);
   this._el = $(this._selector);

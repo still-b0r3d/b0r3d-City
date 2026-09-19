@@ -1209,8 +1209,10 @@ var mountDevPanel = function() {
 
   var messageSel = sel(Object.keys(Text.messageText).sort().map(function(subject) { return [subject, subject]; }));
 
+  // g.rciPanel was in this list until v0.89.6, when the demand graph stopped being a
+  // panel and moved into the HUD bar -- it would be undefined here now.
   var allPanels = function(g) {
-    var list = [g.infoPanel, g.miscButtonsPanel, g.rciPanel, g.toolsPanel];
+    var list = [g.infoPanel, g.miscButtonsPanel, g.toolsPanel];
     Object.keys(g._panelsById).forEach(function(id) { list.push(g._panelsById[id]); });
     return list;
   };

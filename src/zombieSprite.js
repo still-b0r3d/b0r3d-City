@@ -56,18 +56,32 @@ var ZOMBIE_SPEED = 1;
 
 // How much dread one zombie lays down in its block per move, and the ceiling any one
 // block can hold however many of them are standing in it. The scan divides by 20 (as
-// it does for civic buildings), so a saturated block loses 30 off a land value whose
+// it does for civic buildings), so a saturated block loses 50 off a land value whose
 // whole range is 1-250: enough to visibly push a decent neighbourhood down a grade and
 // stall its growth, nowhere near enough to flatten it.
+//
+// Raised from 600 (i.e. -30) in v0.89.6. At -30 out of 250 the effect was under the
+// noise floor of everything else moving the same number around, and since the scan that
+// reads it only runs every seven simulation cycles -- about 5.6 seconds of wall time at
+// medium speed -- a zombie could live and die in town without a single scan seeing it.
+// This is the one number here that is a judgement call rather than a bug fix; the two
+// real bugs were the spawn radius (see spriteManager.js) and the attrition below.
 var DREAD_PER_MOVE = 40;
-var DREAD_MAX = 600;
+var DREAD_MAX = 1000;
 
 // Police pressure. policeStationEffectMap runs 0-1000, and at the top of that range a
 // zombie burns through its lifetime this many times faster than it otherwise would --
-// so a properly policed city clears a wave in a fraction of the time an unpoliced one
-// does. This is the scenario's actual strategy: the answer to the horde is police
-// stations, and the map overlay for police coverage is now there to plan them with.
-var POLICE_ATTRITION = 6;
+// so a properly policed city clears a wave faster than an unpoliced one does. This is
+// the scenario's actual strategy: the answer to the horde is police stations, and the
+// map overlay for police coverage is there to plan them with.
+//
+// Cut from 6 (a 7x burn rate) in v0.89.6. Police coverage exists over the built-up part
+// of the city and nowhere else, so the multiplier only ever applied at the moment a
+// zombie arrived somewhere worth attacking -- the strategy worked so well it deleted the
+// disaster. At 3 a fully-covered neighbourhood still clears a shambler in about a
+// quarter of the time an unprotected one takes, which is a defence rather than an
+// immunity.
+var POLICE_ATTRITION = 3;
 
 // How far off a straight line to the city centre each step can wander. Without this a
 // horde spawned along one edge walks inward as a rank of identical sprites in perfect

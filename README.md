@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Version:** 0.89.7 — see [Changelog](#changelog).
+**Version:** 0.89.8 — see [Changelog](#changelog).
 
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
@@ -21,6 +21,10 @@ Both are unsigned portable Windows executables — no install required, just run
 ## Changelog
 
 Everything this fork adds on top of the original micropolisJS engine, newest first. See also the in-game [About page](https://b0r3d.org/b0r3d-city/about.html), which carries the same changelog plus a Known Issues section for players.
+
+### Version 0.89.8
+
+- **Scores carry a run token.** The leaderboard backend on still.b0r3d.org hands out a token when a city starts (a new one or a loaded one) and wants it back with the score, the same as every other b0r3d.org game: a token is good for one post, and a score sent under two seconds after it is refused. It can't prove a city was played, only rule out a scripted post with no game behind it. A post the backend turns down now says why in the High Scores window instead of "try again later".
 
 ### Version 0.89.7
 

@@ -32,12 +32,42 @@ var GAME_KEY = SiteEnv.leaderboardKey();
 // already set up on that backend for the shared visit counter.
 var API_BASE = 'https://still.b0r3d.org/api/';
 
+// Run tokens (v0.89.8). The backend hands out a token when a run begins
+// (POST /api/<game>/start) and wants it back with the score: a token is good
+// for one post, says when the run began, and the backend refuses a score sent
+// under two seconds after it. It can't prove a city was played, only rule out
+// the instant scripted post. A city spans sessions and a token lives twelve
+// hours, so one is minted whenever a Game is built (a new city or a loaded
+// one) and again when this window opens if the last one has aged out. Only
+// the live sites ask: a copy anywhere else could never post one, and would
+// only make the backend hand out tokens nobody uses.
+var TOKEN_HOSTS = ['b0r3d.org', 'www.b0r3d.org', 'still.b0r3d.org'];
+var TOKEN_FRESH_MS = 11 * 3600 * 1000;
+var TOKEN_MIN_AGE_MS = 2500;
+var runToken = null;
+
+var startRun = function() {
+  if (TOKEN_HOSTS.indexOf(window.location.hostname) === -1)
+    return;
+  runToken = null;
+  $.ajax({url: API_BASE + GAME_KEY + '/start', method: 'POST'}).done(function(data) {
+    if (data && typeof data.runToken === 'string')
+      runToken = {token: data.runToken, at: Date.now()};
+  });
+};
+
+var freshToken = function() {
+  return runToken && Date.now() - runToken.at < TOKEN_FRESH_MS ? runToken : null;
+};
+
 // The backend's "level" field is a plain integer (shared schema with the
 // other arcade games' numeric levels), so the city's evaluation class name
 // is stored/sent as a 1-6 ordinal and translated back to its label here.
 var CLASS_LABELS = ['VILLAGE', 'TOWN', 'CITY', 'CAPITAL', 'METROPOLIS', 'MEGALOPOLIS'];
 
 var HighScoreWindow = ModalWindow(function() {
+  // One of these per Game, so this is a run starting: ask for its token (above)
+  startRun();
   $(highScoreCancelID).on('click', cancel.bind(this));
   $(highScoreFormID).on('submit', submit.bind(this));
 
@@ -144,19 +174,35 @@ var submit = function(e) {
   var self = this;
   $(highScoreStatusID).text('Submitting…');
 
-  $.ajax({
-    url: API_BASE + GAME_KEY + '/submit',
-    method: 'POST',
-    contentType: 'application/json',
-    data: JSON.stringify({name: name, score: self._currentScore, level: self._currentLevel,
-      population: self._currentPopulation, cheatsUsed: self._cheatsUsed})
-  }).done(function(data) {
-    renderScores(data.scores);
-    $(highScoreStatusID).text(data.insertedId !== null && data.insertedId !== undefined ?
-      'Made the top 10!' : 'Submitted — not quite a top 10 this time.');
-  }).fail(function() {
-    $(highScoreStatusID).text('Submission failed — try again later.');
-  });
+  var payload = {name: name, score: self._currentScore, level: self._currentLevel,
+    population: self._currentPopulation, cheatsUsed: self._cheatsUsed};
+  var token = freshToken();
+  if (token)
+    payload.runToken = token.token;
+  // Spent by this post whatever the backend says; a failed post mints a new one
+  runToken = null;
+
+  var send = function() {
+    $.ajax({
+      url: API_BASE + GAME_KEY + '/submit',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(payload)
+    }).done(function(data) {
+      renderScores(data.scores);
+      $(highScoreStatusID).text(data.insertedId !== null && data.insertedId !== undefined ?
+        'Made the top 10!' : 'Submitted — not quite a top 10 this time.');
+    }).fail(function(xhr) {
+      var why = xhr && xhr.responseJSON && xhr.responseJSON.error;
+      $(highScoreStatusID).text(why ? 'The board turned it down: ' + why + '.' : 'Submission failed — try again later.');
+      startRun();
+    });
+  };
+
+  // The backend refuses a score sent under two seconds after its token, and a
+  // token minted as this window opened can be that young
+  var wait = token ? Math.max(0, TOKEN_MIN_AGE_MS - (Date.now() - token.at)) : 0;
+  setTimeout(send, wait);
 };
 
 
@@ -177,6 +223,10 @@ HighScoreWindow.prototype.open = function(data) {
   $(highScoreCurrentClassID).text(HighScoreWindow.levelToClassName(this._currentLevel));
   $(highScoreCurrentPopulationID).text(formatNumber(this._currentPopulation));
   $(highScoreNameID).val('');
+
+  // A tab left open past the token's twelve hours asks for a new one
+  if (!freshToken())
+    startRun();
 
   if (this._cheatsUsed) {
     $(highScoreFormID).hide();

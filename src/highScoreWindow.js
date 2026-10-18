@@ -92,6 +92,35 @@ var refreshScores = function() {
 };
 
 
+// With b0r3d.org's admin mode attached (only ever for the owner's Cloudflare Access login),
+// a cheated city isn't simply refused: this button hands it to admin mode, which asks the
+// owner whether to post it and sends a yes through the Pi's Access-checked admin route
+// (v0.89.7). Without admin mode it never appears.
+var offerAdminPost = function(self) {
+  var admin = window.b0r3dAdmin;
+  if (!admin || !admin.offerPost)
+    return;
+
+  var button = $('<button type="button" id="highScoreAdminPost">Post via admin…</button>');
+  $(highScoreStatusID).append(' ').append(button);
+  button.on('click', function(e) {
+    e.preventDefault();
+    button.prop('disabled', true);
+    admin.offerPost({game: 'city', noun: 'city', board: GAME_KEY, score: self._currentScore, level: self._currentLevel,
+      extra: {population: self._currentPopulation}}).then(function(result) {
+      if (result && result.posted) {
+        renderScores(result.scores);
+        $(highScoreStatusID).text(result.insertedId !== null && result.insertedId !== undefined ?
+          'Posted through admin mode: made the top 10!' : 'Posted through admin mode, but not a top 10.');
+      } else {
+        $(highScoreStatusID).text(result && result.error ? 'Admin post failed: ' + result.error : 'Not posted.');
+        offerAdminPost(self);
+      }
+    });
+  });
+};
+
+
 var cancel = function(e) {
   e.preventDefault();
   this.close();
@@ -152,6 +181,7 @@ HighScoreWindow.prototype.open = function(data) {
   if (this._cheatsUsed) {
     $(highScoreFormID).hide();
     $(highScoreStatusID).text('Score submission is disabled for this city — cheats were used.');
+    offerAdminPost(this);
   } else {
     $(highScoreFormID).show();
     $(highScoreStatusID).text('');
@@ -167,9 +197,14 @@ HighScoreWindow.prototype.open = function(data) {
 // that's already open when it happens loses its submit form there and then, instead of
 // waiting to be closed and reopened. Harmless while closed: open() sets it all again.
 HighScoreWindow.prototype.markCheatsUsed = function() {
+  // Once is enough: a cheat after the first would only rewrite the same line (and drop
+  // admin mode's button from it).
+  if (this._cheatsUsed)
+    return;
   this._cheatsUsed = true;
   $(highScoreFormID).hide();
   $(highScoreStatusID).text('Score submission is disabled for this city — cheats were used.');
+  offerAdminPost(this);
 };
 
 

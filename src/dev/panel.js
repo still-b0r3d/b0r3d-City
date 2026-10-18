@@ -1,9 +1,10 @@
-/* b0r3d-city dev menu.
+/* CITY HALL: b0r3d-city's face in b0r3d.org's admin mode (the old dev menu).
  *
- * Only loaded once `?dev=1` has been seen (see src/devMode.js and micropolis.js), as its
- * own webpack chunk, so none of this is ever downloaded in normal play. Same switch and
- * the same shape as the B0r3d RPG's and z0mbie crystal's dev menus: the DEV MENU button
- * (bottom left) opens it, the ✕ in its header closes it, and backtick does both.
+ * Not in the game's bundle (v0.89.7): admin.js builds it on its own into the site's
+ * _admin/games/city.js, which Cloudflare Access only serves to the owner's login, and it
+ * takes the engine's modules from window.__bc.lib (see webpack.admin.config.js). The
+ * CITY HALL tab opens it, the × in its header closes it, and backtick (admin mode's key)
+ * does both.
  *
  * THE ONE RULE: anything here that changes a city goes through act(), which calls
  * Game.markCheatsUsed -- the same one-way flag the Settings cheat menu trips -- so a city
@@ -66,7 +67,8 @@ var FLAG_BITS = [
 ];
 
 
-var mountDevPanel = function() {
+var mountDevPanel = function(opts) {
+  opts = opts || {};
   var style = h('style', {id: 'devPanelStyle'});
   style.textContent = DEV_CSS;
   document.head.append(style);
@@ -201,7 +203,7 @@ var mountDevPanel = function() {
 
   var badge = h('span', {class: 'dv-badge'});
   var panel = h('div', {id: 'devPanel'});
-  var tab = btn('DEV MENU', function() { setShown(true); }, 'dv-tab', 'Open the dev menu (backtick also works)');
+  var tab = btn('CITY HALL', function() { setShown(true); }, 'dv-tab', 'City Hall: the admin menu (backtick also works)');
 
   var activeCheats = function() {
     var on = [];
@@ -248,8 +250,9 @@ var mountDevPanel = function() {
     placePanel();
   };
 
-  var head = h('div', {class: 'dv-head'}, h('b', {}, 'DEV'), badge,
-    btn('✕ close', function() { setShown(false); }, '', 'Close the dev menu (the DEV MENU button brings it back)'));
+  var head = h('div', {class: 'dv-head'}, h('b', {}, 'City Hall'), h('span', {class: 'dv-staff'}, 'staff only'),
+    btn('×', function() { setShown(false); }, 'dv-x', 'Close (backtick, or the CITY HALL tab, brings it back)'));
+  var badgeRow = h('div', {class: 'dv-badgerow'}, badge);
 
   var drag = null;
   head.addEventListener('mousedown', function(e) {
@@ -392,16 +395,6 @@ var mountDevPanel = function() {
           log(json);
       })
     ),
-    row(
-      btn('turn dev menu off', function() {
-        try {
-          window.localStorage.removeItem(DevMode.DEV_KEY);
-        } catch (e) {
-          // storage blocked
-        }
-        window.location.href = window.location.pathname + '?dev=0';
-      }, 'bad', 'Forget ?dev=1 in this browser and reload without the menu')
-    )
   ]);
 
   // ---------------------------------------------------------------------------
@@ -493,6 +486,10 @@ var mountDevPanel = function() {
     });
   }, 'The Settings window\'s Auto-bulldoze, not a cheat');
 
+  var freeBuildBox = cheatBox('freeBuild', 'free build', 'Every tool costs nothing (the Settings cheat menu\'s Free Build)', function(g, on) {
+    BaseTool.setFreeBuild(on);
+  });
+  var holdFundsBox = cheatBox('holdFunds', 'hold funds at', 'Tops funds back up to the amount below four times a second', function() {});
   var pinBox = cheatBox('pinOn', 'pin demand', 'Hold the R/C/I valves at these values (range ±2000 / ±1500 / ±1500)', applyPin);
 
   var cheatsSec = section('cheats', 'cheats', function() {
@@ -501,10 +498,8 @@ var mountDevPanel = function() {
     bulldozeBox.input.checked = BaseTool.getAutoBulldoze();
   }, [
     h('div', {class: 'dv-grid'},
-      cheatBox('freeBuild', 'free build', 'Every tool costs nothing (the Settings cheat menu\'s Free Build)', function(g, on) {
-        BaseTool.setFreeBuild(on);
-      }),
-      cheatBox('holdFunds', 'hold funds at', 'Tops funds back up to the amount below four times a second', function() {}),
+      freeBuildBox,
+      holdFundsBox,
       disastersBox,
       bulldozeBox,
       prefBox('noBlink', 'no power blink', 'Stop unpowered zones blinking, for clean screenshots', applyBlink),
@@ -1659,20 +1654,20 @@ var mountDevPanel = function() {
     updateBadge();
   }, 250);
 
-  window.addEventListener('keydown', function(e) {
-    if (e.code !== 'Backquote' || e.repeat)
-      return;
-    var t = e.target;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable))
-      return;
-    e.preventDefault();
-    setShown(!shown);
+  // Keys typed in a field stay in the field (the game's keyboard shortcuts read window).
+  ['keydown', 'keyup', 'keypress'].forEach(function(type) {
+    panel.addEventListener(type, function(e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT') && e.key !== '`' && e.key !== 'Escape')
+        e.stopPropagation();
+    });
   });
 
   // ---------------------------------------------------------------------------
   // console API
 
-  window.__bc = {
+  // Added to the hook main.ts made (which carries lib, the engine's modules).
+  window.__bc = Object.assign(window.__bc || {}, {
     game: game,
     log: log,
     drawFrame: redraw,
@@ -1709,16 +1704,54 @@ var mountDevPanel = function() {
         }
       });
     }
-  };
+  });
 
-  panel.append(head, statusSec, cheatsSec, citySec, timeSec, disastersSec, tileSec, overlaysSec, windowsSec, scenarioSec,
-    savesSec, perfSec, logSec);
+  var foot = h('div', {class: 'dv-foot'},
+    opts.openHub ? btn('b0r3d hub ›', opts.openHub, 'dv-link', 'The site\'s admin hub: boards, lore, saves') : null,
+    h('span', {}, opts.foot || ''));
+
+  panel.append(head, badgeRow, statusSec, cheatsSec, citySec, timeSec, disastersSec, tileSec, overlaysSec, windowsSec, scenarioSec,
+    savesSec, perfSec, logSec, foot);
   document.body.append(panel, tab);
   setShown(shown);
   updateBadge();
   refreshOpenSections();
 
-  log('dev menu ready (' + (SiteEnv.isMainSite() ? 'main site' : 'local/beta build') + '). Backtick shows and hides it.');
+  log('city hall open (' + (SiteEnv.isMainSite() ? 'main site' : 'local/beta build') + '). Backtick shows and hides it.');
+
+  // What admin.js needs: the face for admin mode, and the panel's own switches.
+  var cheatBoxes = {freeBuild: freeBuildBox, holdFunds: holdFundsBox, pinOn: pinBox};
+  return {
+    root: panel,
+    open: function() { setShown(true); },
+    close: function() { setShown(false); },
+    isOpen: function() { return shown; },
+    log: log,
+    act: act,
+    look: look,
+    // A cheat switch, as its box does it (on marks the city).
+    setCheat: function(key, on) {
+      var box = cheatBoxes[key];
+      if (!box)
+        throw new Error('no cheat "' + key + '"');
+      if (box.input.checked !== !!on) {
+        box.input.checked = !!on;
+        box.input.dispatchEvent(new Event('change'));
+      }
+      return cheats[key];
+    },
+    cheatOn: function(key) { return !!cheats[key]; },
+    holdAmount: function(amount) {
+      if (amount !== undefined) {
+        prefs.holdAmount = Math.max(0, amount);
+        holdIn.value = prefs.holdAmount;
+        savePrefs();
+        updateBadge();
+      }
+      return prefs.holdAmount;
+    },
+    fastForward: fastForward
+  };
 };
 
 

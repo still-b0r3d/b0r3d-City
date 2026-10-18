@@ -1,6 +1,6 @@
 {
   "name": "micropolisJS",
-  "version": "0.89.6",
+  "version": "0.89.7",
   "description": "A port of the open-source simulator \"Micropolis\" to Javascript/HTML5",
   "repository": {
     "type": "git",
@@ -12,6 +12,7 @@
   "type": "module",
   "scripts": {
     "build": "webpack --mode production",
+    "build:admin": "webpack --config webpack.admin.config.js",
     "watch": "webpack --watch --mode development",
     "test": "jest",
     "test:watch": "jest --watch",

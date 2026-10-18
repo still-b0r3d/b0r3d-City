@@ -126,10 +126,8 @@ var regenerateMap = function(e) {
 };
 
 
-// Every launch path ends here. With the dev menu on (?dev=1) this hands the game to
-// the menu and exposes the window.b0r3dCheats console API (.addFunds(amount),
-// .setFreeBuild(bool), .triggerDisaster(name), .getState(), .game); with it off it
-// does nothing at all -- see devMode.js.
+// Every launch path ends here: hands the game to devMode.js, which keeps it for
+// admin mode's CITY HALL (the old dev menu) and tells admin mode a city began.
 var gameStarted = function(g) {
   DevMode.gameStarted(g);
 };

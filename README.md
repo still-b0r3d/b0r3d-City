@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Version:** 0.89.5 — see [Changelog](#changelog).
+**Version:** 0.89.7 — see [Changelog](#changelog).
 
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
@@ -21,6 +21,10 @@ Both are unsigned portable Windows executables — no install required, just run
 ## Changelog
 
 Everything this fork adds on top of the original micropolisJS engine, newest first. See also the in-game [About page](https://b0r3d.org/b0r3d-city/about.html), which carries the same changelog plus a Known Issues section for players.
+
+### Version 0.89.7
+
+- **The developer menu moved into b0r3d.org's admin mode.** b0r3d.org now has one admin mode for all of its games, behind Cloudflare Access, so the public `?dev=1` switch is gone: anyone could open the menu with it. The menu itself lives on as **City Hall**, this game's face in admin mode, redrawn in the game's own look (a darkslategray title bar, the Chunk face, the game's coloured buttons). It isn't in the game's bundle any more: `npm run build:admin` (`webpack.admin.config.js`) builds `src/dev/` on its own into one script that goes to the site's `_admin/games/city.js`, and it takes every engine module it needs from `window.__bc.lib` (filled by `micropolis.js`) instead of bundling copies. `city.*` commands let a script do the same (`b0r3dAdmin.run('city.funds', 1000000)`). A city it changes is marked as before, and with admin mode attached the High Scores window offers the owner a post through the Pi's admin route instead of only refusing. The desktop exe has no admin mode, so its next build has no menu.
 
 ### Version 0.89.5
 
@@ -82,7 +86,7 @@ Two one-off scripts live in `scripts/`, both run with `node`:
 
 ### Dev menu
 
-Open the game with `?dev=1` (it's remembered; `?dev=0` forgets it). A **DEV MENU** button appears in the footer (top right, under the header, on a phone), and backtick shows and hides the panel. The code is in `src/dev/`, loaded only while the switch is on.
+Since 0.89.7 this is **City Hall**, b0r3d.org's admin mode for this game: it opens for the site owner's Cloudflare Access login only (`?devmode=1` on any b0r3d.org page turns the admin flag on in that browser). A **CITY HALL** button appears in the footer (top right, under the header, on a phone), and backtick shows and hides the panel. The code is in `src/dev/`, built on its own by `npm run build:admin` and never part of the game's bundle. To try it locally, serve the site folder with `dist/` at `/b0r3d-city/` and `dist-admin/city.js` at `/_admin/games/city.js` (admin mode uses a mock leaderboard on localhost).
 
 **Using it disables the leaderboard for that city.** Anything in the menu that changes a city marks it the same way the Settings cheat menu does. The mark is saved with the city and never comes off, so a dev-touched city can't submit a high score now or after a reload. Looking doesn't count: the status readout, the tile inspector, map overlays, opening windows and drawing a frame all leave a city clean. Cheat switches last only until the page reloads, so loading a real save in a dev browser can't mark it by accident.
 

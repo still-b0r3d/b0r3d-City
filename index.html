@@ -247,7 +247,7 @@
         </noscript>
       </main>
       <footer id="footer" class="alignCenter chunk white padding10">
-        <div id="build">v0.89.6 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+        <div id="build">v0.89.7 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
         <div id="footerLinks">
           <a href="about.html" target="_blank">About</a> &middot;
           <a href="https://github.com/still-b0r3d/b0r3d-City" target="_blank">GitHub</a> &middot;
@@ -599,7 +599,7 @@
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersYes" value="true" checked="checked"><label for="disastersYes">Yes</label>
                 <input type="radio" class="enableDisastersSetting" name="disastersSetting" id="disastersNo" value="false"><label for="disastersNo">No</label>
               </div>
-              <!-- "Sandbox" since v0.89.6, not "cheat menu": the dev menu (?dev=1) covers
+              <!-- "Sandbox" since v0.89.6, not "cheat menu": the dev menu (City Hall, admin mode) covers
                    everything this does and more, so what is left of it is a toy for players
                    rather than a tool. The ids stay cheatMenu* -- cheatsUsed, the one-way flag
                    that keeps a city off the leaderboard, is named for the same thing and
@@ -696,5 +696,9 @@
         elem.setAttribute('data-hasscript', 'true');
       });
     </script>
+    <!-- b0r3d.org's admin mode loader (the site's own file): for the owner's Cloudflare Access login
+         it loads CITY HALL (the old dev menu, built by webpack.admin.config.js). Missing in the
+         desktop exe and on a local dev server, where it simply doesn't load. -->
+    <script src="../js/devmode.js" defer></script>
   </body>
 </html>

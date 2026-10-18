@@ -7,39 +7,26 @@
  *
  */
 
-// The dev menu's switch, and the little the main bundle has to know about it.
+// The little the main bundle knows about the dev menu (v0.89.7).
 //
-// `?dev=1` turns the menu on and remembers it in this browser; `?dev=0` turns it off
-// again -- the same switch the B0r3d RPG and z0mbie crystal use. The menu itself
-// (src/dev/) is a separate webpack chunk that micropolis.js only fetches while this is
-// on, so a normal visit never downloads any of it. Everything here is deliberately
-// tiny for the same reason: it ships to every player.
+// The menu is CITY HALL now, this game's face in b0r3d.org's admin mode: built on its
+// own (webpack.admin.config.js) into the site's _admin/games/city.js, which Cloudflare
+// Access only serves to the owner's login, and loaded by the site's js/devmode.js. The
+// public ?dev=1 switch it used to have is gone. What's left here is what it needs from
+// the running page -- the Game, the splash screen, and a one-reload "launch this" -- so
+// it's always on, and deliberately tiny: it ships to every player.
 //
 // Anything the menu does that changes a city goes through Game.markCheatsUsed, the
-// same one-way flag the Settings cheat menu trips, so a city the dev menu has touched
-// can never reach the leaderboard.
+// same one-way flag the Settings cheat menu trips, so a city it has touched stays off
+// the public leaderboard (with admin mode attached, the High Scores window asks the
+// owner instead -- see highScoreWindow.js).
 
-var DEV_KEY = 'b0r3d_city_dev';
-
-// One reload's worth of "launch this straight away", written by the dev menu before it
+// One reload's worth of "launch this straight away", written by the menu before it
 // reloads the page. A running Game can't be torn down (see handleMainMenuRequest in
 // game.js), so starting a different city from inside one means reloading and having
 // the splash screen launch it the moment it's ready. sessionStorage rather than
 // localStorage so a crash mid-launch can't trap the tab in a loop forever.
 var AUTOSTART_KEY = 'b0r3d_city_dev_autostart';
-
-var enabled = (function() {
-  try {
-    var q = new URLSearchParams(window.location.search).get('dev');
-    if (q === '1')
-      window.localStorage.setItem(DEV_KEY, '1');
-    if (q === '0')
-      window.localStorage.removeItem(DEV_KEY);
-    return window.localStorage.getItem(DEV_KEY) === '1';
-  } catch (e) {
-    return false;
-  }
-})();
 
 var currentGame = null;
 var currentSplash = null;
@@ -47,28 +34,14 @@ var gameListeners = [];
 
 
 var DevMode = {
-  DEV_KEY: DEV_KEY,
-
-  isEnabled: function() {
-    return enabled;
-  },
-
-  // Called by splashScreen.js for every Game it launches, dev menu on or not. Only
-  // does anything with the dev menu on: remembers the game for the menu, and exposes
-  // the console API, which used to be on every page -- see TODO.md's leaderboard note.
+  // Called by splashScreen.js for every Game it launches: remembers it for the menu,
+  // and tells admin mode (when the owner's login loaded it) a new city began, for its
+  // "post this city?" question.
   gameStarted: function(game) {
-    if (!enabled)
-      return;
-
     currentGame = game;
 
-    window.b0r3dCheats = {
-      game: game,
-      addFunds: function(amount) { game.cheatAddFunds(amount); },
-      setFreeBuild: function(value) { game.cheatSetFreeBuild(value); },
-      triggerDisaster: function(name) { game.cheatTriggerDisaster(name); },
-      getState: function() { return game.cheatGetState(); }
-    };
+    if (window.b0r3dAdmin)
+      window.b0r3dAdmin.runStart('city');
 
     gameListeners.forEach(function(listener) {
       listener(game);
@@ -86,8 +59,7 @@ var DevMode = {
   },
 
   setSplash: function(splash) {
-    if (enabled)
-      currentSplash = splash;
+    currentSplash = splash;
   },
 
   getSplash: function() {
@@ -103,11 +75,9 @@ var DevMode = {
     }
   },
 
-  // Read once and cleared in the same breath, so it launches exactly one city.
+  // Read once and cleared in the same breath, so it launches exactly one city. Only the
+  // menu writes it, into this tab's own sessionStorage.
   takeAutostart: function() {
-    if (!enabled)
-      return null;
-
     try {
       var raw = window.sessionStorage.getItem(AUTOSTART_KEY);
       window.sessionStorage.removeItem(AUTOSTART_KEY);

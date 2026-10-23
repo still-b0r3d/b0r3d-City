@@ -611,12 +611,19 @@ GameCanvas.prototype._paintTiles = function(ctx, paintData) {
     // and this paint, and iterate over those tiles, repainting where necessary
     var xBound = Math.min(this._lastPaintedWidth, width);
     var yBound = Math.min(this._lastPaintedHeight, height);
+    var lastWidth = this._lastPaintedWidth;
 
-    // Loop over the common area that we painted last time. Compare the current value against what was there last time
+    // Loop over the common area that we painted last time. Compare the current value against what was there last time.
+    //
+    // Each array is row-major in its own width: paintData in this paint's width, lastPaintedTiles in the
+    // previous one's. Until v0.89.9 both were indexed with xBound (the narrower of the two), which is only
+    // right while the two widths agree -- after a resize it read the wrong cell of paintData for every tile
+    // of the old viewport, painted the wrong tile there, and then stored the correct array, so the next
+    // paint saw nothing left to repaint and the scramble stayed until the camera moved.
     for (y = 0; y < yBound; y++) {
       for (x = 0; x < xBound; x++) {
-        index  = y * xBound + x;
-        if (lastPaintedTiles[index] === paintData[index])
+        index = y * width + x;
+        if (lastPaintedTiles[y * lastWidth + x] === paintData[index])
           continue;
 
         // Tile is different: repaint

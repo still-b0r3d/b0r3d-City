@@ -146,8 +146,10 @@ header h1 {
 }
 
 /* Zoom, on the map. Bottom-left, which keeps it clear of the Tools panel on the right,
-   the notification bar along the bottom centre and the FPS readout in the corner. */
-#mapControls:not(.initialHidden) {
+   the notification bar along the bottom centre and the FPS readout in the corner.
+   #zoomControls since v0.89.9: this was #mapControls, an id the City Maps window's
+   overlay-selector row already had, so these rules hit that row too (see index.html). */
+#zoomControls:not(.initialHidden) {
   position: absolute;
   left: 8px;
   bottom: 8px;
@@ -157,7 +159,7 @@ header h1 {
   gap: 4px;
 }
 
-#mapControls button {
+#zoomControls button {
   width: 26px;
   height: 26px;
   padding: 0;
@@ -170,7 +172,7 @@ header h1 {
   line-height: 1;
 }
 
-#mapControls button:hover {
+#zoomControls button:hover {
   background-color: darkslategray;
 }
 

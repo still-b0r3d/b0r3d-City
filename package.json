@@ -1,6 +1,6 @@
 {
   "name": "micropolisJS",
-  "version": "0.89.8",
+  "version": "0.89.9",
   "description": "A port of the open-source simulator \"Micropolis\" to Javascript/HTML5",
   "repository": {
     "type": "git",

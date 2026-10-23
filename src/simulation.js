@@ -679,13 +679,16 @@ Simulation.prototype._sendMessages = function() {
         this._emitEvent(Messages.FRONT_END_MESSAGE, {subject: Messages.ROAD_NEEDS_FUNDING});
       break;
 
+    // Both of these compared against MAX_FIRE_STATION_EFFECT / MAX_POLICE_STATION_EFFECT
+    // until v0.89.9 -- names the budget never defined -- so the threshold was NaN and
+    // neither notice ever appeared.
     case 57:
-      if (this.budget.fireEffect < Math.floor(7 * this.budget.MAX_FIRE_STATION_EFFECT / 10) && this._census.totalPop > 20)
+      if (this.budget.fireEffect < Math.floor(7 * this.budget.MAX_FIRESTATION_EFFECT / 10) && this._census.totalPop > 20)
         this._emitEvent(Messages.FRONT_END_MESSAGE, {subject: Messages.FIRE_STATION_NEEDS_FUNDING});
       break;
 
     case 60:
-      if (this.budget.policeEffect < Math.floor(7 * this.budget.MAX_POLICE_STATION_EFFECT / 10) && this._census.totalPop > 20)
+      if (this.budget.policeEffect < Math.floor(7 * this.budget.MAX_POLICESTATION_EFFECT / 10) && this._census.totalPop > 20)
         this._emitEvent(Messages.FRONT_END_MESSAGE, {subject: Messages.POLICE_NEEDS_FUNDING});
       break;
 

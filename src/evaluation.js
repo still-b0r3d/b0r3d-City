@@ -40,6 +40,17 @@ Evaluation.prototype.cityEvaluation = function(simData) {
 
     this.getAssessedValue(census);
     this.getPopulation(census);
+
+    // The year's net migration, for getScore below and the Evaluation window. Measured
+    // here, against the population at the previous evaluation, rather than inside
+    // getPopulation: that also runs every few ticks for the growth check and the HUD, so
+    // its own difference was only ever the change since the last reading -- a month at
+    // most -- and any dip in the month before the evaluation scored as a shrinking city.
+    // The original keeps the two apart the same way (DoPopNum vs the growth check's
+    // LastCityPop in s_msg.c).
+    this.cityPopDelta = this.cityPop - this.cityPopAtLastEvaluation;
+    this.cityPopAtLastEvaluation = this.cityPop;
+
     this.doProblems(simData.census, simData.budget, simData.blockMaps);
     this.getScore(simData);
     this.doVotes();
@@ -54,6 +65,7 @@ Evaluation.prototype.evalInit = function() {
   this.cityYes = 0;
   this.cityPop = 0;
   this.cityPopDelta = 0;
+  this.cityPopAtLastEvaluation = 0;
   this.cityAssessedValue = 0;
   this.cityClass = Evaluation.CC_VILLAGE;
   this.cityClassLast = Evaluation.CC_VILLAGE;
@@ -68,7 +80,7 @@ Evaluation.prototype.evalInit = function() {
 
 
 var saveProps = ['cityClass', 'cityScore', 'cityYes', 'cityPop',
-                 'cityPopDelta', 'cityScoreDelta', 'cityAssessedValue'];
+                 'cityPopDelta', 'cityScoreDelta', 'cityAssessedValue', 'cityPopAtLastEvaluation'];
 
 Evaluation.prototype.save = function(saveData) {
   for (var i = 0, l = saveProps.length; i < l; i++)
@@ -81,6 +93,12 @@ Evaluation.prototype.load = function(saveData) {
     var val = saveData[saveProps[i]];
     if (val !== undefined) this[saveProps[i]] = val;
   }
+
+  // Saves from before v0.89.9 don't carry the evaluation baseline. Starting it from the
+  // saved population means the first evaluation after loading sees no change, rather
+  // than a whole city's worth of growth.
+  if (typeof this.cityPopAtLastEvaluation !== 'number')
+    this.cityPopAtLastEvaluation = this.cityPop;
 };
 
 
@@ -102,12 +120,14 @@ Evaluation.prototype.getAssessedValue = function(census) {
 };
 
 
+// The current population, and the POPULATION_UPDATED the HUD and scenarios listen for.
+// Called every few ticks by the simulation's growth check as well as once a year by
+// cityEvaluation, which is why the year's change is measured there and not here.
 Evaluation.prototype.getPopulation = function(census) {
   var oldPopulation = this.cityPop;
   this.cityPop = (census.resPop + (census.comPop + census.indPop) * 8) * 20;
-  this.cityPopDelta = this.cityPop - oldPopulation;
 
-  if (this.cityPopDelta !== 0)
+  if (this.cityPop !== oldPopulation)
     this._emitEvent(POPULATION_UPDATED, this.cityPop);
 
   return this.cityPop;
@@ -263,12 +283,14 @@ Evaluation.prototype.getScore = function(simData) {
   if (budget.roadEffect < budget.MAX_ROAD_EFFECT)
     score -= budget.MAX_ROAD_EFFECT - budget.roadEffect;
 
-  // Penalize player by up to 10% for underfunded police and fire services
-  if (budget.policeEffect < budget.MAX_POLICE_STATION_EFFECT)
-    score = Math.round(score * (0.9 + (budget.policeEffect / (10 * budget.MAX_POLICE_STATION_EFFECT))));
+  // Penalize player by up to 10% for underfunded police and fire services. These read
+  // MAX_POLICE_STATION_EFFECT / MAX_FIRE_STATION_EFFECT until v0.89.9, names the budget
+  // never defined, so the comparisons were against undefined and never true.
+  if (budget.policeEffect < budget.MAX_POLICESTATION_EFFECT)
+    score = Math.round(score * (0.9 + (budget.policeEffect / (10 * budget.MAX_POLICESTATION_EFFECT))));
 
-  if (budget.fireEffect < budget.MAX_FIRE_STATION_EFFECT)
-    score = Math.round(score * (0.9 + (budget.fireEffect / (10 * budget.MAX_FIRE_STATION_EFFECT))));
+  if (budget.fireEffect < budget.MAX_FIRESTATION_EFFECT)
+    score = Math.round(score * (0.9 + (budget.fireEffect / (10 * budget.MAX_FIRESTATION_EFFECT))));
 
   // Penalise the player by 15% if demand for any type of zone has collapsed due
   // to overprovision
@@ -290,8 +312,12 @@ Evaluation.prototype.getScore = function(simData) {
     // If the city is growing, scale score by percentage growth in population
     scale = (this.cityPopDelta / this.cityPop) + 1.0;
   } else if (this.cityPopDelta < 0) {
-    // If the city is shrinking, scale down by up to 5% based on level of outward migration
-    scale = 0.95 + Math.floor(this.cityPopDelta / (this.cityPop - this.cityPopDelta));
+    // If the city is shrinking, scale down by the share of the old population that left:
+    // 0.95 plus a fraction between -1 and 0, the original's formula. Until v0.89.9 that
+    // fraction was floored, which made it -1 for any shrinkage at all, the factor -0.05,
+    // the computed score zero, and the stored score (the average with last year's) half
+    // of what it was.
+    scale = 0.95 + this.cityPopDelta / (this.cityPop - this.cityPopDelta);
   }
 
   score = Math.round(score * scale);

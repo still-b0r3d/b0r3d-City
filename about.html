@@ -39,6 +39,20 @@
         <p>
           b0r3d-city is a custom b0r3d.org build based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, a handmade port of <a href="http://code.google.com/p/micropolis/">Micropolis</a> to Javascript. (Micropolis is the open-source release of a commercial game once sold by Electronic Arts). The aim is to grow your city, balancing the various competing demands. Use the buttons in the toolbox to select the various zones and buildings, and then click on the desired location to build.
         </p>
+        <h3 class="alignCenter chunk">Version 0.89.9 &mdash; eight fixes</h3>
+        <p>
+          Bug fixes only, from a top-to-bottom review of the game. Most of these came with the original port.
+        </p>
+        <ul>
+          <li><strong>Fire spreads.</strong> It never did here: every fire was one tile that burned for a while and went out, because the spread check looked at the burning tile instead of its neighbours. Fire stations matter now, meltdowns and explosions start real fires, and Hamburg's opening blaze is a blaze.</li>
+          <li><strong>A dip in population no longer halves your score.</strong> A rounding slip turned any shrinkage at all, even twenty people in the month before the yearly evaluation, into a score cut in half. The Evaluation window's "Net Migration" is now the change over the year, as it was meant to be.</li>
+          <li><strong>Underfunding police and fire costs you again.</strong> The score penalty and the "departments need funding" notices were wired to a name that didn't exist, so they never fired.</li>
+          <li><strong>Burnt, flooded and stomped zones can be bulldozed.</strong> The ruins were only marked clearable by accident.</li>
+          <li><strong>Residential zones grow through all four densities</strong>, and shrink again when they should. They used to skip two of the four, never decline, and count eight more residents than they housed, so populations read a little lower from here on. That is the real figure.</li>
+          <li><strong>Resizing the window no longer scrambles the map.</strong></li>
+          <li><strong>Hotkeys work with the pointer already over the map</strong>, and middle-drag panning keeps working after the pointer has left the map once.</li>
+          <li><strong>City Maps' "Show:" selector is back above the map</strong> instead of sitting on the OK button.</li>
+        </ul>
         <h3 class="alignCenter chunk">Version 0.89.8 &mdash; run tokens</h3>
         <p>
           Scores carry a run token now. The leaderboard hands one out when a city starts (new or loaded) and wants it back with the score, the same as every other b0r3d.org game: a token is good for one post, and a score sent under two seconds after it is refused. It can't prove a city was played, only rule out a scripted post with no game behind it. A post the board turns down says why in the High Scores window instead of "try again later".
@@ -235,7 +249,7 @@
       </div>
     </main>
     <footer id="aboutFooter" class="alignCenter chunk white padding10">
-      <div id="build">v0.89.8 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+      <div id="build">v0.89.9 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
       <div class="nameLicense">
         Based on <a href="https://github.com/graememcc/micropolisJS" target="_blank">micropolisJS</a> by Graeme McCutcheon, itself a port of the open-source <cite>Micropolis</cite>.
       </div>

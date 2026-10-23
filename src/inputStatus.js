@@ -76,6 +76,10 @@ var InputStatus = EventEmitter(function(map, gameCanvas) {
   this.mouseX = -1;
   this.mouseY = -1;
 
+  // Whether the pointer is currently over the map, so a tool picked or cleared while it
+  // is there can bind or drop the map's handlers at once (see syncCanvasHandlers)
+  this._pointerOverCanvas = false;
+
   // Mouse drags
   this._dragging = false;
   this._lastDragX = -1;
@@ -314,16 +318,43 @@ var getRelativeCoordinates = function(e) {
 };
 
 
-var mouseEnterHandler = function(e) {
-  if (this.currentTool === null)
+// The tool-in-hand handlers -- mousemove, plus mousedown for a draggable tool or click
+// for a one-shot one -- are bound only while the pointer is over the map and a tool is
+// selected, and dropped on mouse-leave. Until v0.89.9 they were bound in the enter
+// handler alone, so a tool picked by hotkey with the pointer already over the map had no
+// handlers until the pointer left and came back: the Tools panel highlighted it, and
+// clicks placed nothing. selectTool and clearTool call this too now.
+//
+// Everything here lives in the .tool namespace so mouse-leave can drop exactly these.
+// It used to call off('mousedown') with no handler, which also unbound the middle-drag
+// pan (bound once in the constructor and never again), so the mouse could pan the map
+// only until the first time the pointer left it.
+var syncCanvasHandlers = function() {
+  var canvas = $(this.canvasID);
+  canvas.off('.tool');
+
+  if (!this._pointerOverCanvas || this.currentTool === null)
     return;
 
-  $(this.canvasID).on('mousemove', this.mouseMoveHandler);
+  canvas.on('mousemove.tool', this.mouseMoveHandler);
 
   if (this.currentTool.isDraggable)
-    $(this.canvasID).on('mousedown', this.mouseDownHandler);
+    canvas.on('mousedown.tool', this.mouseDownHandler);
   else
-    $(this.canvasID).on('click', this.canvasClickHandler);
+    canvas.on('click.tool', this.canvasClickHandler);
+};
+
+
+var mouseEnterHandler = function(e) {
+  this._pointerOverCanvas = true;
+
+  // Where the pointer came in, so a tool picked by hotkey before it moves again already
+  // has a position for its placement outline
+  var coords = this.getRelativeCoordinates(e);
+  this.mouseX = coords.x;
+  this.mouseY = coords.y;
+
+  syncCanvasHandlers.call(this);
 };
 
 
@@ -384,7 +415,7 @@ var mouseDownHandler = function(e) {
   this._lastDragX = Math.floor(this.mouseX / this._gameCanvas.getScaledTileWidth());
   this._lastDragY = Math.floor(this.mouseY / this._gameCanvas.getScaledTileWidth());
 
-  $(this.canvasID).on('mouseup', this.mouseUpHandler);
+  $(this.canvasID).on('mouseup.tool', this.mouseUpHandler);
   e.preventDefault();
 };
 
@@ -393,15 +424,16 @@ var mouseUpHandler = function(e) {
   this._dragging = false;
   this._lastDragX = -1;
   this._lastDragY = -1;
-  $(this.canvasID).off('mouseup');
+  $(this.canvasID).off('mouseup.tool');
   e.preventDefault();
 };
 
 
 var mouseLeaveHandler = function(e) {
-  $(this.canvasID).off('mousedown');
-  $(this.canvasID).off('mousemove');
-  $(this.canvasID).off('mouseup');
+  this._pointerOverCanvas = false;
+
+  // Only the tool handlers: the middle-drag pan and the wheel zoom stay bound for good
+  $(this.canvasID).off('.tool');
 
   // Watch out: we might have been mid-drag
   if (this._dragging) {
@@ -409,8 +441,6 @@ var mouseLeaveHandler = function(e) {
     this._lastDragX = -1;
     this._lastDragY = -1;
   }
-
-  $(this.canvasID).off('click');
 
   this.mouseX = -1;
   this.mouseY = -1;
@@ -440,11 +470,17 @@ var mouseMoveHandler = function(e) {
 
 
 var canvasClickHandler = function(e) {
-  // `this._mouseY` here was a typo for `this.mouseY` -- there is no _mouseY, so that
-  // half of the "is the pointer actually over the map" check has never once been true.
-  if (e.which !== 1 || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || this.mouseX === -1 ||
-     this.mouseY === -1 || this._dragging)
+  if (e.which !== 1 || e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || this._dragging)
     return;
+
+  // From the event itself, as mouseDownHandler does, rather than from the last mousemove.
+  // This used to refuse the click while mouseX was still -1, which was meant as an "is
+  // the pointer over the map" test but also caught a tool picked by hotkey after the
+  // pointer had already settled over the map: no mousemove had reached the tool's
+  // handler yet, so the first click did nothing.
+  var coords = this.getRelativeCoordinates(e);
+  this.mouseX = coords.x;
+  this.mouseY = coords.y;
 
   this._emitEvent(Messages.TOOL_CLICKED, {x: this.mouseX, y: this.mouseY});
   e.preventDefault();
@@ -739,6 +775,13 @@ InputStatus.prototype.selectTool = function(button) {
   this.toolColour = button.attr('data-colour');
   this.refreshToolOutput();
 
+  // A drag-paint in progress belonged to the old tool. Then bind whatever this one
+  // needs, if the pointer is already over the map (see syncCanvasHandlers).
+  this._dragging = false;
+  this._lastDragX = -1;
+  this._lastDragY = -1;
+  syncCanvasHandlers.call(this);
+
   if (this.toolName !== 'query') {
     $(this.canvasID).removeClass('helpPointer');
     $(this.canvasID).addClass('pointer');
@@ -787,6 +830,12 @@ InputStatus.prototype.clearTool = function() {
   this.toolColour = '';
   $('.selected').removeClass('selected');
   this.refreshToolOutput();
+
+  // No tool, no tool handlers -- a click on the map does nothing until one is picked
+  this._dragging = false;
+  this._lastDragX = -1;
+  this._lastDragY = -1;
+  syncCanvasHandlers.call(this);
 };
 
 

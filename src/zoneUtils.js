@@ -184,30 +184,30 @@ var checkZoneSize = function(tileValue) {
 
 var fireZone = function(map, x, y, blockMaps) {
   var tileValue = map.getTileValue(x, y);
-  var zoneSize = 2;
 
   // A zone being on fire naturally hurts growth
   var value = blockMaps.rateOfGrowthMap.worldGet(x, y);
   value = MiscUtils.clamp(value - 20, -200, 200);
   blockMaps.rateOfGrowthMap.worldSet(x, y, value);
 
-  if (tileValue === TileValues.AIRPORT)
-    zoneSize = 5;
-  else if (tileValue >= TileValues.PORTBASE)
-    zoneSize = 3;
-  else if (tileValue < TileValues.PORTBASE)
-      zoneSize = 2;
+  // The footprint, from the same table the bulldozer uses, so b0r3d-city's own 3x3 and
+  // 4x4 buildings are covered along with the engine's. Until v0.89.9 this treated every
+  // 4x4 as a 3x3 (the original over-reaches by one row and column there instead).
+  var zoneSize = tileValue === TileValues.AIRPORT ? 6 : (checkZoneSize(tileValue) || 3);
 
-  // Make remaining tiles of the zone bulldozable
-  for (var xDelta = -1; xDelta < zoneSize; xDelta++) {
-    for (var yDelta = -1; yDelta < zoneSize; yDelta++) {
+  // Make the remaining tiles of the zone bulldozable, so the ruin can be cleared. The
+  // test used to read `map.getTileValue(xTem, yTem >= TileValues.ROADBASE)` -- a
+  // misplaced parenthesis that passed a boolean as y, read a tile in the top row of the
+  // map, and marked the zone's tiles only by accident.
+  for (var xDelta = -1; xDelta < zoneSize - 1; xDelta++) {
+    for (var yDelta = -1; yDelta < zoneSize - 1; yDelta++) {
       var xTem = x + xDelta;
       var yTem = y + yDelta;
 
       if (!map.testBounds(xTem, yTem))
         continue;
 
-      if (map.getTileValue(xTem, yTem >= TileValues.ROADBASE))
+      if (map.getTileValue(xTem, yTem) >= TileValues.ROADBASE)
         map.addTileFlags(xTem, yTem, BULLBIT);
     }
   }

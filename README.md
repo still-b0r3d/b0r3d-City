@@ -5,7 +5,7 @@ A custom b0r3d.org build of [micropolisJS](https://github.com/graememcc/micropol
 
 **Live at:** https://b0r3d.org/b0r3d-city/
 
-**Version:** 0.89.8 — see [Changelog](#changelog).
+**Version:** 0.89.9 — see [Changelog](#changelog).
 
 The code is released under the GPLv3 with some additional terms — see [LICENSE](LICENSE) and [COPYING](COPYING).
 
@@ -21,6 +21,19 @@ Both are unsigned portable Windows executables — no install required, just run
 ## Changelog
 
 Everything this fork adds on top of the original micropolisJS engine, newest first. See also the in-game [About page](https://b0r3d.org/b0r3d-city/about.html), which carries the same changelog plus a Known Issues section for players.
+
+### Version 0.89.9
+
+Bug fixes only, from a full review of the project on 2026-10-22. Most of these are inherited from the original port, and several were found independently by two other micropolisJS forks (kawakode's KawaCity and rafaeldavidjose's headless runner), whose notes against the original C source were the reference for the fixes.
+
+- **Fire spreads.** `fireFound` in `miscTiles.js` tested the burning tile instead of its neighbour, so a fire was always one tile that burned for a while and went out. Three more errors sat behind that check and never ran: an undefined `tileUtils`, `fireZone` on the wrong tile, and an explosion placed in tile coordinates where pixels were wanted. Measured before the fix: three forest fires, thirty simulated months, zero tiles caught. Fire stations, meltdowns, explosions and Hamburg's opening fires now do what the original intended.
+- **A population dip no longer halves the score.** `getScore` floored a fraction between -1 and 0 to -1, which turned the shrinking-city factor into -0.05, clamped the computed score to zero and halved the stored one; and because the growth check reused `getPopulation`, the "change" it saw was the last month's, not the year's. Rio went from 273 to 137 on a 200-person dip. The factor follows the original formula now, and the evaluation keeps its own figure for the year's net migration &mdash; which is also what the Evaluation window's "Net Migration" shows. Saved with the city; older saves start the baseline from their current population.
+- **Underfunded police and fire count again.** `evaluation.js` and `simulation.js` read `MAX_POLICE_STATION_EFFECT` and `MAX_FIRE_STATION_EFFECT`; the budget defines them without the middle underscore. The up-to-10% score penalty and the "departments need funding" notices had never fired.
+- **Burnt, flooded and stomped zones can be cleared.** `fireZone` had `getTileValue(xTem, yTem >= ROADBASE)`, a misplaced parenthesis that read a tile in the top row of the map, so the remains of a ruined zone were marked bulldozable only by accident. It also treated every 4x4 building as a 3x3; the footprint comes from `checkZoneSize` now, which covers b0r3d-city's own buildings too.
+- **Residential zones grow through all four densities.** `getZonePopulation` added one step too many, so a zone jumped from houses straight to the second density, never built the first or the fourth, never declined (the degrade step placed the same tile again) and reported eight more residents than it housed. And when a zone broke back into houses, all eight were written onto the centre tile, which destroyed the zone. Populations read a little lower from here on; that is the real count.
+- **Resizing the window scrambled the map.** `_paintTiles` indexed the new tile array with the old viewport width, so after a resize the old area was painted with the wrong tiles and the diff painter then saw nothing left to repaint. Each array is indexed by its own width now.
+- **A hotkey pressed with the pointer already over the map works.** The map's click handlers were bound only on mouse-enter, so a tool picked by key while hovering lit up in the Tools panel and placed nothing until the pointer left the map and came back. Picking or clearing a tool rebinds them. The same leave handler was also dropping the middle-button pan, so the mouse could pan only until the first time the pointer left the map.
+- **City Maps' overlay selector is back above the map.** The zoom buttons added in v0.89.6 reused the id `mapControls`, which the map window's "Show:" row already had, and the zoom CSS parked that row at the bottom-left over the OK button. The zoom container is `zoomControls` now.
 
 ### Version 0.89.8
 

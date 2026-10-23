@@ -224,8 +224,13 @@
              panel's button list, which meant scrolling a list of windows to change the
              view -- they are controls, not menu items, and the scroll wheel has always
              done the same job. Bottom-left so they stay clear of the Tools panel on the
-             right and the notification bar along the bottom centre. -->
-        <div id="mapControls" class="initialHidden">
+             right and the notification bar along the bottom centre.
+
+             zoomControls, not mapControls: the City Maps window's "Show:" row below
+             already had that id, and from v0.89.6 to v0.89.8 this div shared it, so the
+             zoom CSS parked that row at the bottom-left of the map window over its OK
+             button. Ids are unique for a reason. -->
+        <div id="zoomControls" class="initialHidden">
           <button id="zoomInRequest" type="button" title="Zoom in">+</button>
           <button id="zoomOutRequest" type="button" title="Zoom out">&minus;</button>
         </div>
@@ -247,7 +252,7 @@
         </noscript>
       </main>
       <footer id="footer" class="alignCenter chunk white padding10">
-        <div id="build">v0.89.8 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
+        <div id="build">v0.89.9 &middot; Build: <%= htmlWebpackPlugin.options.gitHash %></div>
         <div id="footerLinks">
           <a href="about.html" target="_blank">About</a> &middot;
           <a href="https://github.com/still-b0r3d/b0r3d-City" target="_blank">GitHub</a> &middot;

@@ -44,14 +44,20 @@ var getFreeZonePopulation = function(map, x, y, tileValue) {
 };
 
 
+// The zone's population: the count of houses for the empty zone, otherwise 16, 24, 32 or
+// 40 for the four built densities -- the original's RZPop. Until v0.89.9 the density
+// index had a stray + 1, so the first built density read as 24, and with growZone and
+// degradeZone both working from the figure this returns, a zone jumped from houses to the
+// second density, never built the first or the fourth, never declined, and counted eight
+// more residents than it housed.
 var getZonePopulation = function(map, x, y, tileValue) {
   if (tileValue instanceof Tile)
-    tileValue = tile.getValue();
+    tileValue = tileValue.getValue();
 
   if (tileValue === TileValues.FREEZ)
     return getFreeZonePopulation(map, x, y, tileValue);
 
-  var populationIndex = Math.floor((tileValue - TileValues.RZB) / 9) % 4 + 1;
+  var populationIndex = Math.floor((tileValue - TileValues.RZB) / 9) % 4;
   return populationIndex * 8 + 16;
 };
 
@@ -163,10 +169,13 @@ var degradeZone = function(map, x, y, blockMaps, population, lpValue, zonePower)
     // Already at lowest density: degrade to 8 individual houses
     map.setTile(x, y, TileValues.FREEZ, BLBNCNBIT | ZONEBIT);
 
+    // Each of the eight tiles around the centre. This wrote every house onto (x, y) --
+    // the centre tile just set to FREEZ above -- until v0.89.9, which replaced the zone
+    // marker with a house and left eight stray tiles that were no longer a zone.
     for (yy = y - 1; yy <= y + 1; yy++) {
       for (xx = x - 1; xx <= x + 1; xx++) {
         if (xx === x && yy === y) continue;
-        map.setTile(x, y, TileValues.LHTHR + lpValue + Random.getRandom(2), BLBNCNBIT);
+        map.setTile(xx, yy, TileValues.LHTHR + lpValue + Random.getRandom(2), BLBNCNBIT);
       }
     }
 

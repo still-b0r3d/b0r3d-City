@@ -127,6 +127,8 @@ The same things are scriptable from the console through `window.__bc` (`game()`,
 
 The same production build is deployed to two places: b0r3d.org (the release) and still.b0r3d.org/lab/ (a rolling beta). `src/siteEnv.js` tells them apart at runtime from the hostname; anything not on b0r3d.org labels itself "(Beta Build)" and submits to a separate leaderboard, so beta scores never mix with the real one.
 
+The build number on the page and in About is the commit the build came from (owner, 2026-10-25; up to v0.89.9 it was `b0r3d` + date + time). `getBuildId()` in `webpack.config.js` reads it with git; a build with uncommitted changes says `-dirty`, so commit (and push) before building one for the site. A small change with no version bump still gets its own build number.
+
 ## Credit
 
 Based on [micropolisJS](https://github.com/graememcc/micropolisJS) by Graeme McCutcheon, itself a port of the open-source *Micropolis*.

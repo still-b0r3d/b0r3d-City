@@ -1,6 +1,7 @@
 import { CleanWebpackPlugin } from 'clean-webpack-plugin';
 import CopyPlugin from 'copy-webpack-plugin';
 import HtmlWebpackPlugin  from 'html-webpack-plugin';
+import { execSync } from 'child_process';
 import path from 'path';
 
 // Workaround now this is a module...
@@ -96,16 +97,22 @@ function addProductionConfigTo(options) {
 }
 
 function getBuildId() {
-  // b0r3d.org build numbering: b0r3d + today's date (YYYYMMDD), plus a
-  // 24h HHMM time suffix so multiple same-day builds get distinct IDs.
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-
-  return `b0r3d${year}${month}${day}-${hours}${minutes}`;
+  // b0r3d.org build numbering (owner, 2026-10-25: build numbers are the GitHub
+  // commit, not date codes): the commit this was built from, as a 7-character
+  // short hash. A build with uncommitted changes says so ("-dirty"); never put
+  // one of those on the site. (Up to v0.89.9 this was b0r3d + date + time.)
+  try {
+    const hash = execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    let dirty = false;
+    try {
+      execSync('git diff --quiet HEAD', { stdio: 'ignore' });
+    } catch (e) {
+      dirty = true;
+    }
+    return dirty ? `${hash}-dirty` : hash;
+  } catch (e) {
+    return 'dev';
+  }
 }
 
 function commonOptions() {

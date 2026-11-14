@@ -13,8 +13,8 @@ import { Storage } from './storage.js';
 // format): handing the player a file, and taking one back. Nothing here knows what a
 // save contains -- it moves text between localStorage and the disk.
 
-// The file is named after the slot's id (the slugged name), so "Rukus Falls" comes out
-// as b0r3d-city-rukus-falls.json: readable, and safe on every filesystem without any
+// The file is named after the slot's id (the slugged name), so "Ruckus Falls" comes out
+// as b0r3d-city-ruckus-falls.json: readable, and safe on every filesystem without any
 // further escaping. The ".json" is deliberate -- it's what the file is, and it's what
 // the import picker filters on.
 var fileNameFor = function(id) {

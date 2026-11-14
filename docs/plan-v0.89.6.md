@@ -136,7 +136,7 @@ verbs, not buildings, and you reach for them constantly. Then:
 | Industry | Port, Airport, Data Centre |
 | Services | Police, Fire, Hospital, School, University, Library, Recycling Centre |
 | Leisure | Park, Stadium, Large Park, Arcade, Casino, Amusement Park, Megamart, Bar, Burger Baron |
-| Landmarks | Museum, Rukus, Arch, Observatory, City Hall |
+| Landmarks | Museum, Ruckus, Arch, Observatory, City Hall |
 
 Collapsible, with the group's member count in the header, and which groups are
 open remembered in localStorage (`b0r3dCityToolGroups`) next to the panel

@@ -99,7 +99,7 @@ var RAW_BUILDINGS = [
   // in the neighbourhood is straightforwardly a good thing, and 450 puts him just
   // above the Hospital's 400 and below the Museum's 500.
   {
-    id: 'rukus', label: 'Rukus', cost: 3000, size: 4, animated: false,
+    id: 'rukus', label: 'Ruckus', cost: 3000, size: 4, animated: false,
     colour: 'slategray', textColour: 'white',
     effect: { type: 'coverage', censusStat: 'rukusPop', landValueEffect: 450 },
   },
@@ -154,9 +154,9 @@ var RAW_BUILDINGS = [
   },
   // Three landmarks, in the sense the later games used the word: expensive, purely
   // civic, and worth building because of what they do to the neighbourhood around
-  // them rather than because the city needs one. Rukus above was the first; these
+  // them rather than because the city needs one. Ruckus above was the first; these
   // continue the same land-value ladder (Library 300, Large Park 350, Hospital 400,
-  // Rukus 450, Museum 500) at its top end, and are priced so that the ladder and the
+  // Ruckus 450, Museum 500) at its top end, and are priced so that the ladder and the
   // price list finally agree with each other from here on.
   {
     id: 'arch', label: 'Arch', cost: 2500, size: 3, animated: false,
